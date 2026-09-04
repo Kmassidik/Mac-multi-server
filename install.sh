@@ -56,9 +56,10 @@ PL
   cloudflare_ready && cf_route_add "${PANEL_SUBDOMAIN:-panel}.${DOMAIN}" 127.0.0.1 "${PANEL_PORT:-8088}" || true
 fi
 
-# 6. monitoring (Netdata) → route monitor.$DOMAIN
+# 6. monitoring (Netdata) — local only; exposed THROUGH the panel (login-gated)
 log "starting monitoring (Netdata)…"; brew services start netdata >/dev/null 2>&1 || true
-cloudflare_ready && cf_route_add "${GRAFANA_SUBDOMAIN:-monitor}.${DOMAIN}" 127.0.0.1 19999 || true
+# monitor.$DOMAIN → the panel; the panel requires login, then proxies Netdata (127.0.0.1:19999)
+cloudflare_ready && cf_route_add "${GRAFANA_SUBDOMAIN:-monitor}.${DOMAIN}" 127.0.0.1 "${PANEL_PORT:-8088}" || true
 
 echo; ok "install complete."
 echo "  panel:      https://${PANEL_SUBDOMAIN:-panel}.${DOMAIN:-<domain>}"

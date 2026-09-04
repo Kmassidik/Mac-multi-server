@@ -40,13 +40,31 @@ private func redirect(_ to: String, cookie: String? = nil) -> HttpResponse {
     var h = ["Location": to]; if let c = cookie { h["Set-Cookie"] = c }
     return .raw(302, "Found", h) { _ in }
 }
-private func setCookie(_ t: String) -> String { "\(COOKIE)=\(t); HttpOnly; Secure; Path=/; SameSite=Lax" }
+private func setCookie(_ t: String) -> String {
+    // scope to .$DOMAIN so one login covers panel.$DOMAIN AND monitor.$DOMAIN
+    let dom = Config.shared["DOMAIN"]
+    let domainAttr = dom.isEmpty ? "" : " Domain=.\(dom);"
+    return "\(COOKIE)=\(t); HttpOnly; Secure; Path=/;\(domainAttr) SameSite=Lax"
+}
 private func html(_ s: String) -> HttpResponse { .ok(.html(s)) }
 
 /// Wire all routes. Keeps main.swift tiny.
 func installRoutes(on server: HttpServer, auth: Auth, sessions: Sessions) {
     func authed(_ r: HttpRequest) -> Bool { sessions.valid(token(r)) }
     func csrfOK(_ r: HttpRequest) -> Bool { guard let t = token(r) else { return false }; return form(r)["csrf"] == t }
+
+    // Monitoring (Option 1): the panel also answers monitor.$DOMAIN. Requests to that host
+    // are gated by the same session, then reverse-proxied to the local Netdata agent.
+    let mhost = monitorHost()
+    if !mhost.isEmpty {
+        server.middleware.append { req in
+            let host = (req.headers["host"] ?? "").split(separator: ":").first.map(String.init) ?? ""
+            guard host == mhost else { return nil }            // not the monitor host → normal routing
+            if !auth.isConfigured { return html(Pages.setup(error: nil)) }
+            guard authed(req) else { return html(Pages.login(error: "Sign in to view monitoring")) }
+            return proxyNetdata(req)
+        }
+    }
 
     server.GET["/"] = { req in
         if !auth.isConfigured { return html(Pages.setup(error: nil)) }
