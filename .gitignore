@@ -17,3 +17,8 @@ state/
 # build artifacts
 build/
 dist/
+
+# swift
+.build/
+.swiftpm/
+
