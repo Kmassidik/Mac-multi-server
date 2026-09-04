@@ -19,14 +19,14 @@ to deploy/monitor them, and Cloudflare to give each one a public hostname — no
 ## What you get
 - **Real VPS** — each is a genuine Linux VM (own kernel), not a shared container.
 - **1-click deploy** — choose CPU / RAM / disk + a bundle, click, done.
-- **App bundles** — deploy blank, or pre-loaded with **OpenClaw** (Hermes/LLM later).
+- **App bundles** — deploy blank, or pre-loaded with an agent: **OpenClaw** or **Hermes Agent**.
 - **Your domain** — `vpsN.yourdomain.com` per VPS, `panel.` for the dashboard, via Cloudflare.
 - **Monitoring** — live CPU/RAM/net per VPS (Netdata / Grafana).
 - **Reproducible** — all config in `.env`; reset = wipe VMs, `git pull`, restore `.env`, run one script.
 
 ## Hard truths (Apple Silicon)
 - **Linux guests only for the VPS.** macOS guests are capped at 2 per host by Apple; Linux is unlimited (RAM/CPU-bound).
-- **No GPU in guests.** Metal isn't virtualized, so LLM inference (Hermes) must run on the *host*, not inside a VPS. That's why LLM is a later phase.
+- **No GPU in guests.** Metal isn't virtualized, so a *local* LLM can't run fast inside a VPS. The agent bundles (OpenClaw, Hermes Agent) don't need one — they use cloud/configured models. Local inference, if ever wanted, would run on the host.
 
 ## Quickstart
 ```bash

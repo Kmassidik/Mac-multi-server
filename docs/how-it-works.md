@@ -26,13 +26,14 @@ show the DETAILS card:
 ```
 
 ## Bundles
-A bundle is a recipe in `templates/` that produces a ready-to-run image:
-- **blank** — plain Ubuntu 24.04.
-- **openclaw** — Ubuntu + OpenClaw installed + service enabled + port exposed.
-- **hermes** (later) — agent that calls the host LLM brain (GPU stays on the host).
+A bundle is a folder in `templates/` with an `install.sh` that runs inside the guest on
+deploy. Its install URL comes from `.env` (easy to change if a vendor link moves):
+- **blank** — plain Ubuntu 24.04, nothing installed.
+- **openclaw** — [OpenClaw](https://openclaw.ai): open-source personal AI assistant. Uses cloud/configured models. Finish setup over SSH: `openclaw onboard`.
+- **hermes** — [Hermes Agent](https://hermes-agent.nousresearch.com) (Nous Research): open-source multi-channel agent (Telegram/Discord/… + persistent memory). Uses cloud/configured models.
 
-Bundles are baked into a Tart image once (`tart clone base → install → commit`), so each
-deploy is a fast `clone` of a warm template, not a fresh install.
+Both agents run entirely inside the VPS and need no local GPU. To add your own bundle, drop a
+`templates/<name>/install.sh` and add `<name>` to `BUNDLES` in `.env`.
 
 ## Destroy (clean, no residue)
 ```

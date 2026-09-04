@@ -26,7 +26,7 @@ pieces fit and why each choice was made.
 │   │  +netdata ───┼──┼──────────┼──┼──────────┼──┘ metrics up               │
 │   └──────────────┘  └──────────┘  └──────────┘                            │
 │                                                                            │
-│   (LLM brain on host — LATER; VPS will call it over the bridge)            │
+│   (agent bundles use cloud/configured model APIs — no local GPU needed)    │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -46,7 +46,7 @@ pieces fit and why each choice was made.
 
 1. **Linux guests, not macOS.** Apple caps macOS guests at **2 per host** (license + kernel-enforced, `VZErrorDomain` 6). Linux guests are **unlimited** (RAM/CPU-bound). VPS are Linux.
 2. **Real VMs, not containers.** "Really VPS" → each gets its own kernel. Tart uses VZ.framework directly — most metal-direct, no parent-VM layer (Apple Silicon can't nest full VMs anyway).
-3. **GPU not virtualized.** Metal isn't exposed to guests, so LLM inference can't run fast inside a VPS. When Hermes/LLM lands, the model runs on the **host** and VPS call it over the bridge. Hence "no LLM first."
+3. **GPU not virtualized.** Metal isn't exposed to guests, so a *local* LLM can't run fast inside a VPS. The agent bundles (OpenClaw, Hermes Agent) don't need one — they call cloud/configured models. If you ever want local inference, it runs on the **host**, not in a guest.
 4. **Cloudflare for ingress.** The Mac only needs :22 open; everything else reaches VPS through Cloudflare hostnames — no extra open ports, works behind NAT/changing IPs.
 
 ## Networking (summary — see networking.md)

@@ -1,21 +1,18 @@
 #!/usr/bin/env bash
-# openclaw bundle — runs INSIDE the guest (Ubuntu 24.04) on first deploy.
-# deploy pipes this over SSH: ssh admin@<vps> 'bash -s' < this file.
+# openclaw bundle — runs INSIDE the guest (Ubuntu 24.04) on deploy.
+# OpenClaw: open-source personal AI assistant — https://openclaw.ai (MIT).
 #
-# ⚠️  PLACEHOLDER: fill in the real OpenClaw install steps below.
-#     Keep it idempotent (safe to re-run). When it exposes an HTTP port,
-#     put that port number in templates/openclaw/port so the panel routes it.
+# The install URL comes from .env (OPENCLAW_INSTALL_URL) so it's easy to change
+# if the vendor link ever moves — no code edit needed.
+# Interactive onboarding (API keys, chat channels) is done after, over SSH: `openclaw onboard`.
 set -euo pipefail
+: "${OPENCLAW_INSTALL_URL:?OPENCLAW_INSTALL_URL not set (add it to .env)}"
 
-echo "[openclaw] preparing base…"
+echo "[openclaw] base packages…"
 sudo apt-get update -y
 sudo apt-get install -y curl ca-certificates
 
-# ── TODO: real OpenClaw install ──────────────────────────────
-# e.g.:
-#   curl -fsSL https://get.openclaw.example/install.sh | sh
-#   sudo systemctl enable --now openclaw
-# and set its listen port in ../port  (default assumed 3000)
-echo "[openclaw] TODO: add the real OpenClaw install command in templates/openclaw/install.sh"
+echo "[openclaw] installing from $OPENCLAW_INSTALL_URL …"
+curl -fsSL "$OPENCLAW_INSTALL_URL" | bash
 
-echo "[openclaw] done."
+echo "[openclaw] done. Finish setup over SSH:  openclaw onboard"

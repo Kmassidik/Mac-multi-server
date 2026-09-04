@@ -57,7 +57,9 @@ vps_deploy() {
   local app_port=""
   if [ "$bundle" != blank ] && [ -f "$TEMPLATES_DIR/$bundle/install.sh" ]; then
     log "installing bundle: $bundle…"
-    ssh $O admin@"$ip" 'bash -s' < "$TEMPLATES_DIR/$bundle/install.sh" || warn "bundle install returned non-zero"
+    # pass the *_INSTALL_URL vars from .env into the guest so bundles aren't hardcoded
+    local envpfx=""; while IFS='=' read -r k v; do envpfx+="$k='$v' "; done < <(env | grep -E '^[A-Z_]+_INSTALL_URL=')
+    ssh $O admin@"$ip" "$envpfx bash -s" < "$TEMPLATES_DIR/$bundle/install.sh" || warn "bundle install returned non-zero"
     [ -f "$TEMPLATES_DIR/$bundle/port" ] && app_port="$(cat "$TEMPLATES_DIR/$bundle/port")"
     ok "bundle $bundle installed"
   fi
