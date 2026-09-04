@@ -6,6 +6,10 @@ One-time host preparation + Cloudflare config. Everything you fill lands in `.en
 - Apple Silicon Mac (Mac Studio / Mini / etc.), macOS current.
 - [Homebrew](https://brew.sh).
 - A domain you control, added as a **zone in your Cloudflare account**.
+- **Clone location matters:** put the repo in your **home dir** (`~/mac-multi-server`), *not*
+  `~/Desktop`, `~/Documents`, or `~/Downloads`. Those are TCC-protected, and launchd services
+  can't load binaries from them — the panel would hang in dyld and never start. `install.sh`
+  refuses a TCC path with instructions to move it.
 
 ## 1. Host tools
 `./install.sh` does this for you, but for reference:

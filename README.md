@@ -29,10 +29,14 @@ to deploy/monitor them, and Cloudflare to give each one a public hostname — no
 - **No GPU in guests.** Metal isn't virtualized, so a *local* LLM can't run fast inside a VPS. The agent bundles (OpenClaw, Hermes Agent) don't need one — they use cloud/configured models. Local inference, if ever wanted, would run on the host.
 
 ## Quickstart
+> ⚠️ **Clone to your home dir, NOT `~/Desktop`/`~/Documents`/`~/Downloads`.** Those are
+> TCC-protected on macOS, and launchd services can't run binaries from there (they hang in
+> dyld). `install.sh` will refuse a TCC path and tell you to move it.
+
 ```bash
-git clone <this repo> && cd mac-multi-server
+git clone <this repo> ~/mac-multi-server && cd ~/mac-multi-server
 cp .env.example .env          # fill in DOMAIN + Cloudflare token (see docs/setup.md)
-./install.sh       # install Tart, fix pf for DHCP, wire cloudflared
+./install.sh       # install Tart, fix pf for DHCP, build+run the panel, wire cloudflared
 ./mms deploy --bundle openclaw --cpu 2 --mem 4096 --disk 40
 # → prints the VPS details: hostname, SSH, app URL
 ```

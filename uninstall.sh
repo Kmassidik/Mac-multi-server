@@ -22,11 +22,14 @@ if [ -d "$STATE_DIR" ]; then
   for f in "$STATE_DIR"/vps-*.json; do [ -e "$f" ] || continue; vps_destroy "$(basename "$f" .json)" || true; done
 fi
 
-# 2. control-plane panel
+# 2. control-plane panel (LaunchDaemon now; also clean the old LaunchAgent form)
 log "removing control plane…"
 PL=io.macmultiserver.panel
 launchctl bootout "gui/$(id -u)/$PL" 2>/dev/null || true
 rm -f "$HOME/Library/LaunchAgents/$PL.plist"
+sudo launchctl bootout "system/$PL" 2>/dev/null || true
+sudo rm -f "/Library/LaunchDaemons/$PL.plist"
+pkill -f macserver-panel 2>/dev/null || true
 cloudflare_ready && cf_route_remove "${PANEL_SUBDOMAIN:-panel}.${DOMAIN}" 2>/dev/null || true
 
 # 3. monitoring

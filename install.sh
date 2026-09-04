@@ -9,6 +9,17 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 [ "$(uname -s)" = Darwin ] && [ "$(uname -m)" = arm64 ] || die "Apple Silicon macOS only"
 
+# 0. TCC guard — launchd services CANNOT load binaries from Desktop/Documents/Downloads.
+# macOS TCC blocks even root there (no Full Disk Access), so the process hangs in dyld and
+# never binds. Refuse early with a clear fix instead of a mystifying 502 later.
+case "$ROOT_DIR/" in
+  "$HOME/Desktop/"*|"$HOME/Documents/"*|"$HOME/Downloads/"*)
+    die "This repo is in a TCC-protected folder:
+    $ROOT_DIR
+  launchd can't run services from Desktop/Documents/Downloads. Move it out and re-run, e.g.:
+    mv \"$ROOT_DIR\" ~/mac-multi-server && cd ~/mac-multi-server && ./install.sh" ;;
+esac
+
 # 1. .env
 if [ ! -f "$ENV_FILE" ]; then
   cp "$ROOT_DIR/.env.example" "$ENV_FILE"; chmod 600 "$ENV_FILE"
@@ -34,25 +45,29 @@ log "ensuring pf allows VM DHCP…"; sudo bash -c "source '$LIB_DIR/common.sh'; 
 sudo defaults write /Library/Preferences/SystemConfiguration/com.apple.InternetSharing.default.plist \
   bootpd -dict DHCPLeaseTimeSecs -int 600 2>/dev/null && ok "DHCP lease → 600s" || true
 
-# 5. control plane (login + dashboard): build → launchd → route panel.$DOMAIN
+# 5. control plane (login + dashboard): build → LaunchDaemon → route panel.$DOMAIN
+# A LaunchDaemon (system, runs as you) works headless — no GUI login needed — and, since the
+# repo is now outside TCC folders, it can load the binary fine.
 if [ -f "$ROOT_DIR/control-plane/Package.swift" ]; then
   log "building control plane…"; ( cd "$ROOT_DIR/control-plane" && swift build -c release )
   local_bin="$ROOT_DIR/control-plane/.build/release/macserver-panel"
-  label=io.macmultiserver.panel; plist="$HOME/Library/LaunchAgents/$label.plist"
-  cat > "$plist" <<PL
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
+  label=io.macmultiserver.panel; plist="/Library/LaunchDaemons/$label.plist"
+  sudo bash -c "cat > '$plist' <<PL
+<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
+<plist version=\"1.0\"><dict>
   <key>Label</key><string>$label</string>
+  <key>UserName</key><string>$(id -un)</string>
   <key>ProgramArguments</key><array><string>$local_bin</string><string>--port</string><string>${PANEL_PORT:-8088}</string></array>
   <key>WorkingDirectory</key><string>$ROOT_DIR</string>
   <key>RunAtLoad</key><true/><key>KeepAlive</key><true/>
   <key>StandardOutPath</key><string>/tmp/$label.log</string><key>StandardErrorPath</key><string>/tmp/$label.log</string>
-</dict></plist>
-PL
-  launchctl bootout "gui/$(id -u)/$label" 2>/dev/null || true
-  launchctl bootstrap "gui/$(id -u)" "$plist" 2>/dev/null || warn "panel launchd bootstrap failed"
-  ok "control plane on 127.0.0.1:${PANEL_PORT:-8088}"
+</dict></plist>"
+  sudo launchctl bootout "system/$label" 2>/dev/null || true
+  sudo launchctl bootstrap system "$plist" 2>/dev/null || warn "panel LaunchDaemon bootstrap failed"
+  sleep 2
+  if curl -s -o /dev/null -m 3 http://127.0.0.1:${PANEL_PORT:-8088}/; then ok "control plane live on 127.0.0.1:${PANEL_PORT:-8088}"
+  else warn "panel not responding yet on ${PANEL_PORT:-8088} — check /tmp/$label.log"; fi
   cloudflare_ready && cf_route_add "${PANEL_SUBDOMAIN:-panel}.${DOMAIN}" 127.0.0.1 "${PANEL_PORT:-8088}" || true
 fi
 
