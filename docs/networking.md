@@ -19,7 +19,7 @@ DHCP request**. The DISCOVER is `0.0.0.0:68 → 255.255.255.255:67` — no sourc
 matches neither the `192.168.64.0/24` pass rule nor the common `67→68` server-direction rule.
 The VM boots to a login prompt but **never gets an IP** (and shows 0% CPU — idle, not stuck).
 
-**Fix:** allow the client→server direction. `scripts/pf-allow-dhcp.sh` adds, before the block:
+**Fix:** allow the client→server direction. `./mms pf-fix` adds, before the block:
 ```
 pass in quick proto udp from any port 67 to any port 68   # server → client (already there)
 pass in quick proto udp from any port 68 to any port 67   # client → server (THIS is the fix)

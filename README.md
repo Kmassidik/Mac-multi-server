@@ -32,8 +32,8 @@ to deploy/monitor them, and Cloudflare to give each one a public hostname — no
 ```bash
 git clone <this repo> && cd mac-multi-server
 cp .env.example .env          # fill in DOMAIN + Cloudflare token (see docs/setup.md)
-./scripts/setup-host.sh       # install Tart, fix pf for DHCP, wire cloudflared
-./scripts/deploy-vps.sh --bundle openclaw --cpu 2 --mem 4096 --disk 40
+./install.sh       # install Tart, fix pf for DHCP, wire cloudflared
+./mms deploy --bundle openclaw --cpu 2 --mem 4096 --disk 40
 # → prints the VPS details: hostname, SSH, app URL
 ```
 
@@ -45,12 +45,15 @@ cp .env.example .env          # fill in DOMAIN + Cloudflare token (see docs/setu
 
 ## Layout
 ```
-scripts/         setup-host, deploy-vps, destroy-vps, cloudflare-route, pf-allow-dhcp
-templates/       bundle recipes (blank, openclaw) baked into VM images
-control-plane/   the web dashboard + deploy API
+install.sh       one-shot host setup (clone → ./install.sh)
+mms              the CLI: deploy · destroy · ls · logs · pf-fix
+lib/             sourced helpers: common · pf · cloudflare · vps
+templates/       VPS bundles: blank/, openclaw/
+control-plane/   native Swift panel (login + dashboard) → macserver-panel
 docs/            architecture & guides
 .env.example     config template (copy to .env)
 ```
+Both the CLI (`./mms`) and the web panel call the **same** engine in `lib/` — one source of truth.
 
 ## Status
 Early build. Proof-of-concept validated: Tart Linux VM boots on the metal, pf DHCP rule

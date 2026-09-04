@@ -51,7 +51,7 @@ pieces fit and why each choice was made.
 
 ## Networking (summary — see networking.md)
 - Tart puts VMs on a NAT bridge (`192.168.64.0/24`), DHCP served by macOS `bootpd`.
-- **pf must allow the DHCP client→server direction** (`udp 68→67`) or VMs never get a lease. This is scripted in `scripts/pf-allow-dhcp.sh` — the #1 gotcha.
+- **pf must allow the DHCP client→server direction** (`udp 68→67`) or VMs never get a lease. This is scripted in `./mms pf-fix` — the #1 gotcha.
 - cloudflared maps `vpsN.$DOMAIN` → `192.168.64.x:<port>` (ingress rules generated per deploy).
 
 ## Deploy flow (summary — see how-it-works.md)
@@ -64,5 +64,5 @@ pieces fit and why each choice was made.
 ## Reset story
 Everything is in the repo + `.env`. To rebuild from scratch:
 ```
-wipe VMs → git pull → restore .env → ./scripts/setup-host.sh
+wipe VMs → git pull → restore .env → ./install.sh
 ```

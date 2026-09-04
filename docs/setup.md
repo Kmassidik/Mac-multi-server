@@ -8,7 +8,7 @@ One-time host preparation + Cloudflare config. Everything you fill lands in `.en
 - A domain you control, added as a **zone in your Cloudflare account**.
 
 ## 1. Host tools
-`scripts/setup-host.sh` does this for you, but for reference:
+`./install.sh` does this for you, but for reference:
 ```bash
 brew install cirruslabs/cli/tart                 # the hypervisor
 brew install hudochenkov/sshpass/sshpass         # first-login key injection
@@ -19,7 +19,7 @@ brew install cloudflared                          # ingress tunnel
 If your Mac runs a default-deny pf ruleset, VMs can't get an IP until you allow the DHCP
 client→server direction. See [networking.md](networking.md). Scripted:
 ```bash
-sudo ./scripts/pf-allow-dhcp.sh
+sudo ./mms pf-fix
 ```
 Also shorten the DHCP lease for many-VM use:
 ```bash
@@ -54,8 +54,8 @@ cp .env.example .env
 
 ## 5. Go
 ```bash
-./scripts/setup-host.sh                       # verifies tools, pf, tunnel
-./scripts/deploy-vps.sh --bundle openclaw     # first VPS
+./install.sh                       # verifies tools, pf, tunnel
+./mms deploy --bundle openclaw     # first VPS
 ```
 
 ## Security notes
