@@ -28,22 +28,12 @@ sudo defaults write /Library/Preferences/SystemConfiguration/com.apple.InternetS
 ```
 
 ## 3. Cloudflare
-### 3a. Named tunnel (once)
-```bash
-cloudflared tunnel login
-cloudflared tunnel create mac-multi-server          # note the Tunnel ID
-```
-Run it as a service so it survives reboot (`cloudflared service install` with the tunnel token).
+**👉 Beginner walkthrough: [docs/cloudflare.md](cloudflare.md)** — click-by-click for the 4 `.env` values.
 
-### 3b. API token (for auto-creating vpsN. routes)
-Create a token at dash.cloudflare.com → My Profile → API Tokens with **least privilege**:
-- **Zone → DNS → Edit** (your zone only)
-- **Account → Cloudflare Tunnel → Edit**
-
-### 3c. IDs you need
-- `CLOUDFLARE_ZONE_ID` — Overview page of your domain (right sidebar).
-- `CLOUDFLARE_ACCOUNT_ID` — same sidebar / URL.
-- `CLOUDFLARE_TUNNEL_ID` — from `cloudflared tunnel create`.
+Short version:
+- Routes are created via the **Cloudflare API** on your existing token-based tunnel (no local config.yml).
+- You need an **API token** (least privilege: **Zone → DNS → Edit** + **Account → Cloudflare Tunnel → Edit**), plus your **Zone ID**, **Account ID**, and **Tunnel ID**.
+- `ACCOUNT_ID` and `TUNNEL_ID` can be read from the running tunnel's token; the guide shows how to get the token + Zone ID from the dashboard.
 
 ## 4. Fill `.env`
 ```bash

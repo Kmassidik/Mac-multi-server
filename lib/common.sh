@@ -27,7 +27,7 @@ load_env() {
   : "${VPS_SSH_PUBKEY:=$HOME/.ssh/id_ed25519.pub}"
 }
 require_env(){ for v in "$@"; do [ -n "${!v:-}" ] || die ".env missing required key: $v"; done; }
-cloudflare_ready(){ [ -n "${DOMAIN:-}" ] && [ -n "${CLOUDFLARE_API_TOKEN:-}" ] && [ -n "${CLOUDFLARE_TUNNEL_ID:-}" ]; }
+cloudflare_ready(){ [ -n "${DOMAIN:-}" ] && [ -n "${CLOUDFLARE_API_TOKEN:-}" ] && [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ] && [ -n "${CLOUDFLARE_ZONE_ID:-}" ] && [ -n "${CLOUDFLARE_TUNNEL_ID:-}" ]; }
 
 # ── tools ────────────────────────────────────────────────────
 need_tool(){ command -v "$1" >/dev/null 2>&1 || die "missing tool: $1 (run ./install.sh)"; }
