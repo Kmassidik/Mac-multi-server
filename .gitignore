@@ -1,0 +1,19 @@
+# secrets / local config — NEVER commit
+.env
+*.env
+!.env.example
+
+# credentials / keys
+*.pem
+*.key
+cloudflared-*.json
+secrets/
+
+# local state / logs
+*.log
+state/
+.DS_Store
+
+# build artifacts
+build/
+dist/
