@@ -47,6 +47,41 @@ print(json.dumps({"config":cfg}))' "$host" "$ip" "$port") || { warn "cf: build c
   ok "routed $host → http://$ip:$port"
 }
 
+# cf_sweep_platform — remove EVERY platform host from the domain (tunnel ingress + DNS):
+# panel.$DOMAIN, monitor.$DOMAIN, and any vps<N>.$DOMAIN. Leaves ssh.$DOMAIN and all other
+# records untouched. Catches orphans whose local state is already gone. Really clean.
+cf_sweep_platform() {
+  require_env CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_ZONE_ID CLOUDFLARE_TUNNEL_ID
+  local panel="${PANEL_SUBDOMAIN:-panel}" mon="${GRAFANA_SUBDOMAIN:-monitor}"
+  local base="/accounts/$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel/$CLOUDFLARE_TUNNEL_ID/configurations"
+
+  # hostnames from tunnel ingress that match our patterns
+  local from_ingress from_dns hosts
+  from_ingress=$(_cf GET "$base" | python3 -c '
+import sys,json,re
+dom,panel,mon=sys.argv[1:4]
+cfg=(json.load(sys.stdin).get("result") or {}).get("config") or {}
+pat=re.compile(r"^(?:%s|%s|vps[0-9]+)\.%s$"%(re.escape(panel),re.escape(mon),re.escape(dom)))
+for r in cfg.get("ingress",[]):
+    h=r.get("hostname","")
+    if h and pat.match(h): print(h)' "$DOMAIN" "$panel" "$mon" 2>/dev/null)
+
+  # names from DNS records that match (in case ingress is gone but DNS lingers)
+  from_dns=$(_cf GET "/zones/$CLOUDFLARE_ZONE_ID/dns_records?per_page=200" | python3 -c '
+import sys,json,re
+dom,panel,mon=sys.argv[1:4]
+recs=json.load(sys.stdin).get("result") or []
+pat=re.compile(r"^(?:%s|%s|vps[0-9]+)\.%s$"%(re.escape(panel),re.escape(mon),re.escape(dom)))
+for r in recs:
+    n=r.get("name","")
+    if pat.match(n): print(n)' "$DOMAIN" "$panel" "$mon" 2>/dev/null)
+
+  hosts=$(printf '%s\n%s\n' "$from_ingress" "$from_dns" | sort -u | grep -v '^$')
+  if [ -z "$hosts" ]; then ok "domain already clean (no platform records)"; return 0; fi
+  while read -r h; do [ -n "$h" ] && cf_route_remove "$h"; done <<< "$hosts"
+  ok "domain swept clean (ssh.$DOMAIN and other records preserved)"
+}
+
 # cf_route_remove <hostname>
 cf_route_remove() {
   local host="$1"

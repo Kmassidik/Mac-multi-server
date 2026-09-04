@@ -47,14 +47,23 @@ cp .env.example .env          # fill in DOMAIN + Cloudflare token (see docs/setu
 ## Layout
 ```
 install.sh       one-shot host setup (clone → ./install.sh)
+uninstall.sh     clean teardown (--purge for images too) — wipes clean like docker/nix
 mms              the CLI: deploy · destroy · ls · logs · pf-fix
 lib/             sourced helpers: common · pf · cloudflare · vps
-templates/       VPS bundles: blank/, openclaw/
+templates/       VPS bundles: blank/, openclaw/, hermes/
 control-plane/   native Swift panel (login + dashboard) → macserver-panel
+flake.nix        `nix develop` for the CLI tooling (cloudflared, sshpass, jq)
 docs/            architecture & guides
 .env.example     config template (copy to .env)
 ```
 Both the CLI (`./mms`) and the web panel call the **same** engine in `lib/` — one source of truth.
+
+## Uninstall (clean, like docker/nix)
+```bash
+./uninstall.sh            # remove all VPS, the panel, monitoring routes, state + services
+./uninstall.sh --purge    # also remove cached base images + the DNS helper
+```
+Everything the platform created is removed; your `.env` and the repo folder stay until you delete them.
 
 ## Status
 Early build. Proof-of-concept validated: Tart Linux VM boots on the metal, pf DHCP rule
