@@ -20,12 +20,13 @@ enum Pages {
 
     static func errBlock(_ e: String?) -> String { e.map { "<div class=\"err\">\(esc($0))</div>" } ?? "" }
 
-    static func setup(error: String?) -> String {
-        tpl("setup.html", ["ERROR": errBlock(error), "USER": esc(Config.shared.or("PANEL_ADMIN_USER", "admin"))])
+    static func setup(error: String?, csrf: String) -> String {
+        tpl("setup.html", ["ERROR": errBlock(error), "CSRF": esc(csrf),
+                           "USER": esc(Config.shared.or("PANEL_ADMIN_USER", "admin"))])
     }
 
-    static func login(error: String?) -> String {
-        tpl("login.html", ["ERROR": errBlock(error)])
+    static func login(error: String?, csrf: String) -> String {
+        tpl("login.html", ["ERROR": errBlock(error), "CSRF": esc(csrf)])
     }
 
     static func dashboard(user: String, vpsList: [VPS], csrf: String, notice: String?) -> String {

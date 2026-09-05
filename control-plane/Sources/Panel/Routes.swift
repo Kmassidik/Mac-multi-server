@@ -48,34 +48,72 @@ private func setCookie(_ t: String) -> String {
 }
 private func html(_ s: String) -> HttpResponse { .ok(.html(s)) }
 
+/// Real client IP — behind cloudflared the socket peer is always 127.0.0.1, so trust the
+/// forwarded headers first (Cloudflare sets CF-Connecting-IP).
+private func clientIP(_ req: HttpRequest) -> String {
+    if let cf = req.headers["cf-connecting-ip"], !cf.isEmpty { return cf }
+    if let xff = req.headers["x-forwarded-for"], !xff.isEmpty {
+        return xff.split(separator: ",").first.map { $0.trimmingCharacters(in: .whitespaces) } ?? String(xff)
+    }
+    return req.address ?? "?"
+}
+
+// pre-auth CSRF (double-submit cookie) for the login/setup forms
+private func randomToken() -> String { (0..<24).map { _ in String(format: "%02x", Int.random(in: 0...255)) }.joined() }
+private func csrfCookie(_ t: String) -> String { "mms_csrf=\(t); HttpOnly; Secure; Path=/; SameSite=Strict" }
+private func csrfVal(_ req: HttpRequest) -> String? {
+    guard let cookie = req.headers["cookie"] else { return nil }
+    for part in cookie.split(separator: ";") {
+        let kv = part.trimmingCharacters(in: .whitespaces).split(separator: "=", maxSplits: 1)
+        if kv.count == 2, kv[0] == "mms_csrf" { return String(kv[1]) }
+    }
+    return nil
+}
+/// clear the session cookie — must mirror the Domain it was set with, or the browser keeps it.
+private func clearCookie() -> String {
+    let dom = Config.shared["DOMAIN"]
+    let d = dom.isEmpty ? "" : " Domain=.\(dom);"
+    return "\(COOKIE)=; HttpOnly; Secure; Path=/;\(d) Max-Age=0"
+}
+
 /// Wire all routes. Keeps main.swift tiny.
 func installRoutes(on server: HttpServer, auth: Auth, sessions: Sessions) {
     func authed(_ r: HttpRequest) -> Bool { sessions.valid(token(r)) }
     func csrfOK(_ r: HttpRequest) -> Bool { guard let t = token(r) else { return false }; return form(r)["csrf"] == t }
 
-    // Monitoring (Option 1): the panel also answers monitor.$DOMAIN. Requests to that host
-    // are gated by the same session, then reverse-proxied to the local Netdata agent.
+    // serve login/setup with a fresh CSRF cookie (double-submit pattern)
+    func serveAuth(login: Bool, error: String?) -> HttpResponse {
+        let t = randomToken()
+        let page = login ? Pages.login(error: error, csrf: t) : Pages.setup(error: error, csrf: t)
+        return .raw(200, "OK", ["Content-Type": "text/html; charset=utf-8", "Set-Cookie": csrfCookie(t)]) {
+            try $0.write([UInt8](page.utf8))
+        }
+    }
+    func panelURL() -> String { "https://\(Config.shared.or("PANEL_SUBDOMAIN", "panel")).\(Config.shared["DOMAIN"])/" }
+    func csrfFormOK(_ req: HttpRequest) -> Bool { guard let c = csrfVal(req), !c.isEmpty else { return false }; return form(req)["csrf"] == c }
+
+    // Monitoring: panel also answers monitor.$DOMAIN — gated by the shared session, then
+    // reverse-proxied to Netdata. Unauthenticated visitors are bounced to the panel to log in
+    // (rendering a login form on this host is a dead end — it proxies everything to Netdata).
     let mhost = monitorHost()
     if !mhost.isEmpty {
         server.middleware.append { req in
             let host = (req.headers["host"] ?? "").split(separator: ":").first.map(String.init) ?? ""
-            guard host == mhost else { return nil }            // not the monitor host → normal routing
-            if !auth.isConfigured { return html(Pages.setup(error: nil)) }
-            guard authed(req) else { return html(Pages.login(error: "Sign in to view monitoring")) }
+            guard host == mhost else { return nil }
+            guard auth.isConfigured, authed(req) else { return redirect(panelURL()) }
             return proxyNetdata(req)
         }
     }
 
     func dashPage(_ req: HttpRequest) -> HttpResponse {
-        if !auth.isConfigured { return html(Pages.setup(error: nil)) }
-        guard authed(req) else { return html(Pages.login(error: nil)) }
+        guard auth.isConfigured, authed(req) else { return redirect("/") }   // protected → bounce to login
         let notice = req.queryParams.first(where: { $0.0 == "notice" })?.1
         return html(Pages.dashboard(user: auth.username() ?? "admin",
                                     vpsList: Store.list(), csrf: token(req) ?? "", notice: notice))
     }
     server.GET["/"] = { req in
-        if !auth.isConfigured { return html(Pages.setup(error: nil)) }
-        return authed(req) ? redirect("/dashboard") : html(Pages.login(error: nil))
+        if auth.isConfigured && authed(req) { return redirect("/dashboard") }
+        return serveAuth(login: auth.isConfigured, error: nil)
     }
     server.GET["/dashboard"] = { req in dashPage(req) }
 
@@ -89,26 +127,28 @@ func installRoutes(on server: HttpServer, auth: Auth, sessions: Sessions) {
 
     server.POST["/setup"] = { req in
         guard !auth.isConfigured else { return redirect("/") }
+        guard csrfFormOK(req) else { return serveAuth(login: false, error: "Session expired — try again.") }
         let f = form(req); let u = f["username"] ?? "", p = f["password"] ?? "", c = f["confirm"] ?? ""
-        guard !u.isEmpty, p.count >= 8, p == c else { return html(Pages.setup(error: "Password must be ≥8 chars and match.")) }
-        do { try auth.set(username: u, password: p) } catch { return html(Pages.setup(error: "Could not save: \(error)")) }
+        guard !u.isEmpty, p.count >= 8, p == c else { return serveAuth(login: false, error: "Password must be ≥8 chars and match.") }
+        do { try auth.set(username: u, password: p) } catch { return serveAuth(login: false, error: "Could not save: \(error)") }
         return redirect("/dashboard", cookie: setCookie(sessions.new()))
     }
 
     server.POST["/login"] = { req in
-        let ip = req.address ?? "?"
-        if sessions.lockedOut(ip) { return html(Pages.login(error: "Too many attempts. Wait a few minutes.")) }
+        let ip = clientIP(req)
+        if sessions.lockedOut(ip) { return serveAuth(login: true, error: "Too many attempts. Wait a few minutes.") }
+        guard csrfFormOK(req) else { return serveAuth(login: true, error: "Session expired — try again.") }
         let f = form(req)
         if auth.verify(username: f["username"] ?? "", password: f["password"] ?? "") {
             sessions.clearFail(ip); return redirect("/dashboard", cookie: setCookie(sessions.new()))
         }
         sessions.recordFail(ip); usleep(400_000)
-        return html(Pages.login(error: "Invalid username or password"))
+        return serveAuth(login: true, error: "Invalid username or password")
     }
 
     server.POST["/logout"] = { req in
         if csrfOK(req) { sessions.drop(token(req)) }
-        return redirect("/", cookie: "\(COOKIE)=; Path=/; Max-Age=0")
+        return redirect("/", cookie: clearCookie())
     }
 
     server.POST["/deploy"] = { req in
