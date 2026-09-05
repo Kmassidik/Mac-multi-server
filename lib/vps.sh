@@ -27,11 +27,13 @@ PL
     || { warn "launchd bootstrap failed; using nohup"; nohup "$tart" run --no-graphics "$name" >/tmp/$label.log 2>&1 & }
 }
 
-# vps_deploy <bundle> <cpu> <mem_mb> <disk_gb> [name]
+# vps_deploy <bundle> <cpu> <mem_mb> <disk_gb> [name] [label]
 vps_deploy() {
   need_tool tart; need_tool sshpass
-  local bundle="$1" cpu="$2" mem="$3" disk="$4" name="${5:-$(next_vps_name)}"
+  local bundle="$1" cpu="$2" mem="$3" disk="$4" name="${5:-$(next_vps_name)}" label="${6:-}"
   valid_name "$name"
+  # JSON-escape the human label (backslash, quote, strip control chars)
+  label="$(printf '%s' "$label" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr -d '\000-\037')"
   [[ "$cpu" =~ ^[0-9]+$ && "$mem" =~ ^[0-9]+$ && "$disk" =~ ^[0-9]+$ ]] || die "cpu/mem/disk must be numbers"
   [ "$bundle" = blank ] || [ -d "$TEMPLATES_DIR/$bundle" ] || die "unknown bundle: $bundle"
   [ -f "$VPS_SSH_PUBKEY" ] || die "no ssh pubkey at $VPS_SSH_PUBKEY (set VPS_SSH_PUBKEY in .env)"
@@ -71,22 +73,25 @@ vps_deploy() {
       && ok "monitoring agent reporting to hub" || warn "beszel agent install skipped/failed"
   fi
 
-  local host=""
-  if cloudflare_ready && [ -n "$app_port" ]; then
-    host="$(vps_hostname "$name")"; cf_route_add "$host" "$ip" "$app_port" || warn "cloudflare route failed"
+  # SSH over the domain (Cloudflare tunnel) — tenants reach the VPS by name, never by IP.
+  local ssh_host=""
+  if cloudflare_ready; then
+    ssh_host="$(vps_hostname "$name")"
+    cf_ssh_route_add "$ssh_host" "$ip" || { warn "cloudflare ssh route failed"; ssh_host=""; }
   fi
 
   mkdir -p "$STATE_DIR"
   cat > "$STATE_DIR/$name.json" <<JSON
-{ "name":"$name","bundle":"$bundle","status":"running","cpu":$cpu,"mem_mb":$mem,"disk_gb":$disk,
-  "ip":"$ip","app_port":"$app_port","hostname":"$host","created":"$(date -u +%FT%TZ)" }
+{ "name":"$name","label":"$label","bundle":"$bundle","status":"running","cpu":$cpu,"mem_mb":$mem,"disk_gb":$disk,
+  "ip":"$ip","app_port":"$app_port","hostname":"","ssh_host":"$ssh_host","created":"$(date -u +%FT%TZ)" }
 JSON
 
   echo
   echo "  ✓ $name  ● running  ·  Ubuntu · ${cpu}vCPU/${mem}MB/${disk}GB · $bundle"
-  echo "    IP:  $ip"
-  [ -n "$host" ] && echo "    App: https://$host"
-  echo "    SSH: ssh -J ${PANEL_SSH_JUMP:-<mac>} admin@$ip"
+  echo "    IP (host-side): $ip"
+  if [ -n "$ssh_host" ]; then echo "    SSH: ssh admin@$ssh_host   (tenant needs cloudflared + ProxyCommand — shown in panel)"
+  else echo "    SSH: ssh admin@$ip   (no domain — set Cloudflare keys in .env)"; fi
+  echo "    Manage/terminal: https://${PANEL_SUBDOMAIN:-panel}.${DOMAIN}/vps/$name"
   echo "    Destroy: ./mms destroy $name"
 }
 

@@ -3,6 +3,7 @@ import Foundation
 /// One VPS, as written to state/<name>.json by `mms deploy`.
 struct VPS: Codable {
     var name: String
+    var label: String?          // human "Name" tag (AWS-style); optional for older state files
     var bundle: String
     var status: String
     var cpu: Int
@@ -11,7 +12,11 @@ struct VPS: Codable {
     var ip: String
     var app_port: String
     var hostname: String
+    var ssh_host: String?       // domain SSH endpoint (vpsN.$DOMAIN via Cloudflare); no IP exposed
     var created: String
+
+    /// What to show as the title: the label if set, else the id.
+    var display: String { (label?.isEmpty == false) ? label! : name }
 }
 
 /// Reads VPS state and drives the `mms` CLI. The panel never re-implements the
@@ -20,6 +25,7 @@ struct VPS: Codable {
 struct Bundle {
     var key: String
     var name: String
+    var base: String      // the OS underneath, e.g. "Ubuntu 24.04 LTS"
     var code: String
     var icon: String
     var logo: String      // URL path like /logos/x.svg; used only if the file exists (else icon)
@@ -39,6 +45,7 @@ enum Store {
                 .flatMap { try? JSONDecoder().decode([String: String].self, from: $0) } ?? [:]
             return Bundle(key: key,
                           name: meta["name"] ?? key.capitalized,
+                          base: meta["base"] ?? "Ubuntu 24.04 LTS",
                           code: meta["code"] ?? key.uppercased(),
                           icon: meta["icon"] ?? "📦",
                           logo: meta["logo"] ?? "",
@@ -55,19 +62,50 @@ enum Store {
             .sorted { $0.name < $1.name }
     }
 
+    /// One VPS by id (name), or nil.
+    static func get(_ name: String) -> VPS? {
+        guard validName(name) else { return nil }
+        let url = stateDir.appendingPathComponent("\(name).json")
+        return (try? Data(contentsOf: url)).flatMap { try? JSONDecoder().decode(VPS.self, from: $0) }
+    }
+
+    /// The bundle metadata for a VPS (for base OS / logo on the detail page).
+    static func bundle(_ key: String) -> Bundle? { bundles().first { $0.key == key } }
+
+    /// Set the human "Name" tag on a VPS (rewrites its state file).
+    @discardableResult
+    static func rename(_ name: String, label: String) -> Bool {
+        guard var v = get(name) else { return false }
+        // one line, trimmed, no control chars — mirrors the engine's escaping
+        let clean = String(label.prefix(60))
+            .replacingOccurrences(of: "\n", with: " ")
+            .filter { $0.asciiValue.map { $0 >= 32 } ?? true }
+            .trimmingCharacters(in: .whitespaces)
+        v.label = clean
+        let url = stateDir.appendingPathComponent("\(name).json")
+        guard let data = try? JSONEncoder().encode(v) else { return false }
+        do { try data.write(to: url); return true } catch { return false }
+    }
+
     static func validName(_ s: String) -> Bool {
         !s.isEmpty && s.range(of: "^[a-zA-Z0-9._-]+$", options: .regularExpression) != nil
     }
 
     /// Kick off a deploy (takes ~60s) in the background — never trust the form blindly.
-    static func deploy(bundle: String, cpu: Int, mem: Int, disk: Int) {
+    static func deploy(bundle: String, cpu: Int, mem: Int, disk: Int, label: String = "") {
         let allowed = Set(Config.shared.or("BUNDLES", "blank,openclaw")
             .split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) })
         let b = allowed.contains(bundle) ? bundle : "blank"
-        mms(["deploy", "--bundle", b,
-             "--cpu",  String(max(1, min(cpu, 16))),
-             "--mem",  String(max(512, min(mem, 131072))),
-             "--disk", String(max(10, min(disk, 500)))])
+        var args = ["deploy", "--bundle", b,
+                    "--cpu",  String(max(1, min(cpu, 16))),
+                    "--mem",  String(max(512, min(mem, 131072))),
+                    "--disk", String(max(10, min(disk, 500)))]
+        let clean = String(label.prefix(60))
+            .replacingOccurrences(of: "\n", with: " ")
+            .filter { $0.asciiValue.map { $0 >= 32 } ?? true }
+            .trimmingCharacters(in: .whitespaces)
+        if !clean.isEmpty { args += ["--label", clean] }
+        mms(args)
     }
 
     static func destroy(name: String) {

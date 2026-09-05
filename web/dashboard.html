@@ -31,11 +31,13 @@
           <input type="hidden" name="csrf" value="{{CSRF}}">
           <div class="sec">
             <h2>{{DEPLOYTITLE}}</h2>
-            <span class="meta">{{OPTCOUNT}} AVAILABLE</span>
+            <span class="meta">{{OPTCOUNT}} IMAGES AVAILABLE</span>
             <button type="button" class="closebtn" onclick="closeDeploy()">✕ Close</button>
           </div>
+          <p class="hint">Choose an image — each is a real <strong>Ubuntu 24.04 LTS</strong> VPS, optionally with an agent pre-installed. Then set a name and size.</p>
           <div class="envgrid">{{BUNDLES}}</div>
           <div class="provision">
+            <div class="wide"><label>Name <span class="opt">(optional)</span></label><input type="text" name="label" maxlength="60" placeholder="e.g. my-email-bot" autocomplete="off"></div>
             <div><label>Compute (vCPU)</label><input type="number" name="cpu" value="{{CPU}}" min="1" max="16"></div>
             <div><label>Memory (MB)</label><input type="number" name="mem" value="{{MEM}}" step="1024" min="512"></div>
             <div><label>Storage (GB)</label><input type="number" name="disk" value="{{DISK}}" step="10" min="10"></div>

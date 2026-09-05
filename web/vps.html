@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{DISPLAY}} · Mac-multi-server</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/vendor/xterm.min.css">
+</head><body class="detail">
+<div class="announce">MAC-MULTI-SERVER · INSTANCE {{NAME}}</div>
+<div class="shell">
+  <aside class="side">
+    <div class="logo"><div class="sq"></div><span>Platform</span></div>
+    <nav>
+      <div><h3>Infrastructure</h3><a href="/dashboard">Deployments</a></div>
+      <div><h3>Monitoring</h3><a href="{{MONHREF}}" target="_blank">Metrics &amp; logs</a></div>
+    </nav>
+    <div class="usr">
+      <form method="get" action="/dashboard"><button>← All servers</button></form>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="mobilebar"><div class="lg"><div class="sq"></div>Platform</div><a class="btn line" href="/dashboard">← Back</a></div>
+    <div class="content">
+      {{NOTICE}}
+
+      <div class="detailhead">
+        <div class="dh-logo">{{LOGO}}</div>
+        <div class="dh-main">
+          <div class="dh-title">{{DISPLAY}} <span class="tag {{STATUSCLASS}}">{{STATUS}}</span></div>
+          <div class="dh-sub">{{CODE}} · {{BASE}} · bundle: {{BUNDLE}} · id {{NAME}}</div>
+        </div>
+        <div class="dh-actions">
+          <button class="btn" type="button" onclick="openTerm()">▸ Web terminal</button>
+          <a class="btn line" href="{{MONHREF}}" target="_blank">Metrics ↗</a>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <section class="panel">
+          <div class="sec"><h2>Specifications</h2></div>
+          <dl class="kv">
+            <div><dt>Image</dt><dd>{{BASE}}</dd></div>
+            <div><dt>Bundle</dt><dd>{{BUNDLE}}</dd></div>
+            <div><dt>Compute</dt><dd>{{CPU}} vCPU</dd></div>
+            <div><dt>Memory</dt><dd>{{MEM}} MB</dd></div>
+            <div><dt>Storage</dt><dd>{{DISK}} GB</dd></div>
+            <div><dt>SSH domain</dt><dd>{{SSHHOST}}</dd></div>
+            <div><dt>IP (host-only)</dt><dd>{{IP}}</dd></div>
+            <div><dt>Created</dt><dd>{{CREATED}}</dd></div>
+          </dl>
+        </section>
+
+        <section class="panel">
+          <div class="sec"><h2>Access &amp; management</h2></div>
+
+          <label class="fld">SSH — by domain, no IP</label>
+          <div class="copybox"><code id="sshcmd">{{SSH}}</code><button class="btn line" type="button" onclick="copyEl('sshcmd', this)">Copy</button></div>
+          {{SSHSETUP}}
+
+          <label class="fld">Name tag</label>
+          <form method="post" action="/vps/{{NAME}}/rename" class="inline">
+            <input type="hidden" name="csrf" value="{{CSRF}}">
+            <input type="text" name="label" value="{{LABEL}}" maxlength="60" placeholder="Name this server" autocomplete="off">
+            <button class="btn line" type="submit">Save</button>
+          </form>
+
+          <label class="fld danger-label">Danger zone</label>
+          <form method="post" action="/destroy" onsubmit="return confirm('Destroy {{DISPLAY}}? This is permanent.')">
+            <input type="hidden" name="csrf" value="{{CSRF}}"><input type="hidden" name="name" value="{{NAME}}">
+            <button class="btn danger" type="submit">Terminate instance</button>
+          </form>
+        </section>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Web terminal modal — the WebSocket (and its ssh pty) exist ONLY while this is open. -->
+<div id="termModal" class="modal" hidden onclick="if(event.target===this)closeTerm()">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="mh-title">TERMINAL · {{DISPLAY}} <span class="meta" id="termstatus">…</span></div>
+      <button class="modal-x" type="button" onclick="closeTerm()" aria-label="Close terminal">✕</button>
+    </div>
+    <div id="terminal"></div>
+    <div class="modal-foot">
+      <span class="hint">Live pty over the VM bridge — no IP or extra port exposed. Closing ends the session.</span>
+      <button class="btn line" type="button" id="reconnectBtn" onclick="openTerm()" hidden>Reconnect</button>
+    </div>
+  </div>
+</div>
+
+<script src="/vendor/xterm.min.js"></script>
+<script src="/vendor/xterm-addon-fit.min.js"></script>
+<script>
+function copyEl(id, btn){
+  const t = document.getElementById(id).textContent;
+  navigator.clipboard.writeText(t).then(()=>{ const o=btn.textContent; btn.textContent='Copied'; setTimeout(()=>btn.textContent=o,1200); });
+}
+
+let term=null, fit=null, ws=null;
+const $ = id => document.getElementById(id);
+const modalOpen = () => !$('termModal').hidden;
+
+function setStatus(t, cls){ const s=$('termstatus'); s.textContent=t; s.className='meta'+(cls?' '+cls:''); }
+function sendResize(){ if (ws && ws.readyState===1 && term) ws.send(JSON.stringify({resize:[term.cols, term.rows]})); }
+
+function ensureTerm(){
+  if (term) return;
+  term = new Terminal({ cursorBlink:true, fontFamily:"'Space Mono',ui-monospace,monospace", fontSize:13, scrollback:5000,
+    theme:{ background:'#111111', foreground:'#e8e8e8', cursor:'#00f56d', selectionBackground:'#00f56d', selectionForeground:'#111111' } });
+  fit = new FitAddon.FitAddon(); term.loadAddon(fit);
+  term.open($('terminal'));
+  const enc = new TextEncoder();
+  term.onData(d => { if (ws && ws.readyState===1) ws.send(enc.encode(d)); });   // keystrokes → binary
+  term.onResize(() => sendResize());
+}
+
+function connect(){
+  if (ws) { try{ws.close();}catch(e){} ws=null; }
+  setStatus('CONNECTING…');
+  const proto = location.protocol==='https:' ? 'wss' : 'ws';
+  ws = new WebSocket(proto+'://'+location.host+'/vps/{{NAME}}/term');
+  ws.binaryType = 'arraybuffer';
+  ws.onopen    = () => { setStatus('CONNECTED','ok'); $('reconnectBtn').hidden=true; setTimeout(()=>{try{fit.fit();}catch(e){} sendResize(); term.focus();},30); };
+  ws.onclose   = () => { setStatus('DISCONNECTED','no'); if (modalOpen()) $('reconnectBtn').hidden=false; };
+  ws.onerror   = () => { setStatus('ERROR','no'); };
+  ws.onmessage = (e) => { if (typeof e.data==='string') term.write(e.data); else term.write(new Uint8Array(e.data)); };
+}
+
+function openTerm(){
+  $('termModal').hidden = false;
+  $('reconnectBtn').hidden = true;
+  ensureTerm();
+  connect();
+}
+function closeTerm(){
+  if (ws) { try{ws.close();}catch(e){} ws=null; }   // server sees disconnect → kills the ssh pty (frees RAM)
+  $('termModal').hidden = true;
+  if (term) term.clear();
+}
+
+addEventListener('keydown', e => { if (e.key==='Escape' && modalOpen()) closeTerm(); });
+addEventListener('resize',  () => { if (term && modalOpen()) { try{fit.fit();}catch(e){} sendResize(); } });
+</script>
+</body></html>

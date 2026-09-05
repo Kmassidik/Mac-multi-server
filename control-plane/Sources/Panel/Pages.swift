@@ -30,7 +30,6 @@ enum Pages {
     }
 
     static func dashboard(user: String, vpsList: [VPS], csrf: String, notice: String?) -> String {
-        let jump = Config.shared["PANEL_SSH_JUMP"]
         let bl = Store.bundles()
 
         // environment grid: real radios (name=bundle) — active state is pure CSS (input:checked + .envcard)
@@ -45,6 +44,7 @@ enum Pages {
                 <div class="logo">\(logoHTML)</div>
                 <span class="code">\(esc(b.code))</span>
                 <h3>\(esc(b.name))</h3>
+                <div class="base">🐧 \(esc(b.base))\(b.key == "blank" ? "" : " · + " + esc(b.name))</div>
                 <p>\(esc(b.description))</p>
               </div>
             </label>
@@ -57,22 +57,23 @@ enum Pages {
         let servers = vpsList.isEmpty
             ? "<div class=\"empty\">// NO INSTANCES PROVISIONED IN CURRENT CLUSTER</div>"
             : vpsList.map { v in
-                let host = v.hostname.isEmpty ? "" : " · <a href=\"https://\(esc(v.hostname))\" target=\"_blank\">\(esc(v.hostname))</a>"
-                let ssh = "ssh -J \(jump.isEmpty ? "&lt;mac&gt;" : esc(jump)) admin@\(esc(v.ip))"
+                let host = v.hostname.isEmpty ? "" : " · <a href=\"https://\(esc(v.hostname))\" target=\"_blank\" onclick=\"event.stopPropagation()\">\(esc(v.hostname))</a>"
+                let named = (v.label?.isEmpty == false)
+                let idline = named ? "\(esc(v.name)) · " : ""
                 let tag = v.status == "running" ? "tag run" : "tag"
                 return """
-                <div class="vps">
+                <div class="vps" onclick="location.href='/vps/\(esc(v.name))'">
                   <div class="id">
                     <div class="live"></div>
                     <div>
-                      <div class="nm">\(esc(v.name))</div>
-                      <div class="sub">\(esc(v.bundle)) · \(v.cpu) vCPU · \(v.mem_mb) MB · \(v.disk_gb) GB · \(esc(v.ip))\(host)</div>
-                      <div class="sub">\(ssh)</div>
+                      <div class="nm">\(esc(v.display))</div>
+                      <div class="sub">\(idline)\(esc(v.bundle)) · \(v.cpu) vCPU · \(v.mem_mb) MB · \(v.disk_gb) GB · \(esc(v.ip))\(host)</div>
                     </div>
                   </div>
                   <div class="right">
                     <span class="\(tag)">\(esc(v.status))</span>
-                    <form method="post" action="/destroy" onsubmit="return confirm('Destroy \(esc(v.name))? This is permanent.')">
+                    <a class="btn line" href="/vps/\(esc(v.name))" onclick="event.stopPropagation()">Manage ↗</a>
+                    <form method="post" action="/destroy" onclick="event.stopPropagation()" onsubmit="return confirm('Destroy \(esc(v.display))? This is permanent.')">
                       <input type="hidden" name="csrf" value="\(csrf)"><input type="hidden" name="name" value="\(esc(v.name))">
                       <button class="btn line" type="submit">Terminate</button>
                     </form>
@@ -92,6 +93,49 @@ enum Pages {
             "MEM": esc(Config.shared.or("VPS_DEFAULT_MEM_MB", "4096")),
             "DISK": esc(Config.shared.or("VPS_DEFAULT_DISK_GB", "40")),
             "SERVERS": servers,
+        ])
+    }
+
+    /// AWS-style instance detail: specs, network, actions, web terminal.
+    static func vpsDetail(vps v: VPS, csrf: String, notice: String? = nil) -> String {
+        let b = Store.bundle(v.bundle)
+        let base = b?.base ?? "Ubuntu 24.04 LTS"
+        let logoPath = b?.logo ?? ""
+        let logoHTML = (!logoPath.isEmpty && FileManager.default.fileExists(atPath: rootURL("web" + logoPath).path))
+            ? "<img src=\"\(esc(logoPath))\" alt=\"\">" : (b?.icon ?? "🐧")
+
+        let mon = Config.shared["GRAFANA_SUBDOMAIN"], dom = Config.shared["DOMAIN"]
+        let monHref = (!mon.isEmpty && !dom.isEmpty) ? "https://\(esc(mon)).\(esc(dom))" : "#"
+
+        // SSH by domain (Cloudflare tunnel) — never expose an IP to tenants.
+        let sshHost = v.ssh_host ?? ""
+        let ssh = sshHost.isEmpty ? "ssh admin@\(v.ip)" : "ssh admin@\(sshHost)"
+        // one-time tenant setup (only meaningful once the VPS has a domain route)
+        let sshSetup = sshHost.isEmpty ? "" : """
+        <label class="fld">First time only — on your machine</label>
+        <p class="hint sub2">Install <a href="https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/" target="_blank">cloudflared</a>, then add this to <code>~/.ssh/config</code> so SSH tunnels through the domain (no IP, no open port):</p>
+        <div class="copybox"><code id="sshcfg">Host *.\(esc(dom))\n  ProxyCommand cloudflared access ssh --hostname %h</code><button class="btn line" type="button" onclick="copyEl('sshcfg', this)">Copy</button></div>
+        """
+
+        return tpl("vps.html", [
+            "NAME": esc(v.name),
+            "DISPLAY": esc(v.display),
+            "LABEL": esc(v.label ?? ""),
+            "STATUS": esc(v.status),
+            "STATUSCLASS": v.status == "running" ? "run" : "",
+            "BUNDLE": esc(v.bundle),
+            "BASE": esc(base),
+            "LOGO": logoHTML,
+            "CODE": esc(b?.code ?? ""),
+            "CPU": String(v.cpu), "MEM": String(v.mem_mb), "DISK": String(v.disk_gb),
+            "IP": esc(v.ip),
+            "SSHHOST": sshHost.isEmpty ? "<span class=\"muted\">— set Cloudflare keys in .env —</span>" : esc(sshHost),
+            "SSH": esc(ssh),
+            "SSHSETUP": sshSetup,
+            "CREATED": esc(v.created),
+            "MONHREF": monHref,
+            "CSRF": esc(csrf),
+            "NOTICE": notice.map { "<div class=\"notice\">\(esc($0))</div>" } ?? "",
         ])
     }
 }

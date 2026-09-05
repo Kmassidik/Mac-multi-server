@@ -1,1 +1,1 @@
-{ "name": "Hermes Agent", "code": "AI-02", "icon": "🪽", "logo": "/logos/hermes.webp", "description": "Autonomous multi-channel agent by Nous Research, with persistent memory." }
+{ "name": "Hermes Agent", "base": "Ubuntu 24.04 LTS", "code": "AI-02", "icon": "🪽", "logo": "/logos/hermes.webp", "description": "Ubuntu 24.04 with Hermes Agent pre-installed — Nous Research's autonomous multi-channel agent with persistent memory. Ready on first boot." }

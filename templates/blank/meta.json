@@ -1,1 +1,1 @@
-{ "name": "Blank Ubuntu", "code": "OS-01", "icon": "🐧", "logo": "/logos/ubuntu.png", "description": "A clean Ubuntu 24.04 LTS server. Nothing pre-installed — build it your way." }
+{ "name": "Blank Ubuntu", "base": "Ubuntu 24.04 LTS", "code": "OS-01", "icon": "🐧", "logo": "/logos/ubuntu.png", "description": "A clean Ubuntu 24.04 LTS server — root SSH, nothing pre-installed. Build it your way." }

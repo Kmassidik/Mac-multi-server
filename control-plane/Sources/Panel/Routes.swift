@@ -91,6 +91,15 @@ func installRoutes(on server: HttpServer, auth: Auth, sessions: Sessions) {
     }
     func csrfFormOK(_ req: HttpRequest) -> Bool { guard let c = csrfVal(req), !c.isEmpty else { return false }; return form(req)["csrf"] == c }
 
+    // Anti-CSWSH: if a browser Origin is present it must be our panel host (or localhost).
+    // (SameSite=Lax already blocks the session cookie on cross-site WS; this is belt-and-braces.)
+    func originOK(_ req: HttpRequest) -> Bool {
+        guard let origin = req.headers["origin"], !origin.isEmpty else { return true }  // non-browser client
+        let dom = Config.shared["DOMAIN"], panel = Config.shared.or("PANEL_SUBDOMAIN", "panel")
+        if !dom.isEmpty, origin == "https://\(panel).\(dom)" { return true }
+        return origin.hasPrefix("http://127.0.0.1") || origin.hasPrefix("http://localhost")
+    }
+
     // Monitoring (Beszel) has its own login and is routed straight to its hub by cloudflared,
     // so the panel doesn't proxy it — nothing to intercept here.
 
@@ -127,6 +136,57 @@ func installRoutes(on server: HttpServer, auth: Auth, sessions: Sessions) {
         }
         return staticFile("logos/\(f)", ctype)
     }
+    // vendored front-end libs (xterm.js) — self-hosted, basename only.
+    server.GET["/vendor/:file"] = { req in
+        let f = req.params[":file"] ?? ""
+        guard f.range(of: "^[A-Za-z0-9._-]+\\.(js|css|map)$", options: .regularExpression) != nil else { return .notFound }
+        let ctype = f.hasSuffix(".css") ? "text/css; charset=utf-8" : "application/javascript; charset=utf-8"
+        return staticFile("vendor/\(f)", ctype)
+    }
+
+    // ── VPS detail page ──────────────────────────────────────────────
+    server.GET["/vps/:name"] = { req in
+        guard auth.isConfigured, authed(req) else { return redirect("/") }
+        guard let v = Store.get(req.params[":name"] ?? "") else { return redirect("/dashboard?notice=No%20such%20VPS") }
+        let notice = req.queryParams.first(where: { $0.0 == "notice" })?.1
+        return html(Pages.vpsDetail(vps: v, csrf: token(req) ?? "", notice: notice))
+    }
+    // rename the human "Name" tag
+    server.POST["/vps/:name/rename"] = { req in
+        guard authed(req), csrfOK(req) else { return redirect("/") }
+        let name = req.params[":name"] ?? ""
+        guard Store.get(name) != nil else { return redirect("/dashboard") }
+        Store.rename(name, label: form(req)["label"] ?? "")
+        return redirect("/vps/\(name)?notice=Renamed")
+    }
+
+    // ── Web terminal: browser ⇄ (this WebSocket) ⇄ ssh-in-a-pty ⇄ VPS ──
+    // One PTYBridge per connection. Auth via the session cookie; Origin-checked.
+    server["/vps/:name/term"] = { req -> HttpResponse in
+        guard auth.isConfigured, authed(req), originOK(req) else { return .raw(403, "Forbidden", nil) { _ in } }
+        guard let v = Store.get(req.params[":name"] ?? ""), !v.ip.isEmpty else { return .notFound }
+        let pty = PTYBridge(ip: v.ip)
+        return websocket(
+            text: { _, txt in
+                // control channel: {"resize":[cols,rows]}
+                if let d = txt.data(using: .utf8),
+                   let o = try? JSONSerialization.jsonObject(with: d) as? [String: Any],
+                   let r = o["resize"] as? [Int], r.count == 2 {
+                    pty.resize(cols: r[0], rows: r[1])
+                }
+            },
+            binary: { _, bytes in pty.write(bytes) },       // keystrokes / paste
+            connected: { session in
+                pty.start(cols: 80, rows: 24,
+                    onOutput: { session.writeBinary($0) },
+                    onClose: {
+                        session.writeText("\r\n\u{1b}[90m— session closed —\u{1b}[0m\r\n")
+                        session.writeFrame(ArraySlice<UInt8>(), .close)
+                    })
+            },
+            disconnected: { _ in pty.stop() }
+        )(req)
+    }
 
     server.POST["/setup"] = { req in
         guard !auth.isConfigured else { return redirect("/") }
@@ -160,7 +220,8 @@ func installRoutes(on server: HttpServer, auth: Auth, sessions: Sessions) {
         Store.deploy(bundle: f["bundle"] ?? "blank",
                      cpu:  Int(f["cpu"]  ?? "") ?? 2,
                      mem:  Int(f["mem"]  ?? "") ?? 4096,
-                     disk: Int(f["disk"] ?? "") ?? 40)
+                     disk: Int(f["disk"] ?? "") ?? 40,
+                     label: f["label"] ?? "")
         return redirect("/dashboard?notice=Deploying%20a%20new%20VPS%E2%80%A6%20refresh%20in%20~1%20min.")
     }
 
