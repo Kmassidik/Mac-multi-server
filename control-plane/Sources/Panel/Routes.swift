@@ -79,6 +79,14 @@ func installRoutes(on server: HttpServer, auth: Auth, sessions: Sessions) {
     }
     server.GET["/dashboard"] = { req in dashPage(req) }
 
+    // static assets from web/
+    func staticFile(_ rel: String, _ ctype: String) -> HttpResponse {
+        guard let d = try? Data(contentsOf: rootURL("web/\(rel)")) else { return .notFound }
+        return .raw(200, "OK", ["Content-Type": ctype, "Cache-Control": "no-cache"]) { try $0.write([UInt8](d)) }
+    }
+    server.GET["/style.css"] = { _ in staticFile("style.css", "text/css; charset=utf-8") }
+    server.GET["/app.js"]   = { _ in staticFile("app.js", "application/javascript; charset=utf-8") }
+
     server.POST["/setup"] = { req in
         guard !auth.isConfigured else { return redirect("/") }
         let f = form(req); let u = f["username"] ?? "", p = f["password"] ?? "", c = f["confirm"] ?? ""

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mac-multi-server</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head><body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="brand"><span class="dot"></span>Mac-multi-server</div>
+      <div class="who">{{USER}}{{MONLINK}}</div>
+    </div>
+    <form method="post" action="/logout"><input type="hidden" name="csrf" value="{{CSRF}}"><button class="btn">Sign out</button></form>
+  </header>
+  {{NOTICE}}
+  <div class="panel">
+    <h2>Deploy a server</h2>
+    <form method="post" action="/deploy">
+      <input type="hidden" name="csrf" value="{{CSRF}}">
+      <input type="hidden" name="bundle" id="bundle" value="{{FIRSTBUNDLE}}">
+      <div class="bundles">{{BUNDLES}}</div>
+      <div class="row">
+        <div><label>vCPU</label><input name="cpu" type="number" value="{{CPU}}" min="1" max="16"></div>
+        <div><label>RAM (MB)</label><input name="mem" type="number" value="{{MEM}}" min="512"></div>
+        <div><label>Disk (GB)</label><input name="disk" type="number" value="{{DISK}}" min="10"></div>
+        <div style="flex:0"><label>&nbsp;</label><button class="btn accent" type="submit">Deploy</button></div>
+      </div>
+    </form>
+  </div>
+  <h2 class="sec">Servers</h2>
+  <div class="grid">{{SERVERS}}</div>
+</div>
+<script src="/app.js"></script>
+</body></html>
