@@ -39,7 +39,7 @@ vps_deploy() {
 
   log "deploying $name ($bundle · ${cpu}vCPU · ${mem}MB · ${disk}GB)"
   tart clone "$VPS_BASE_IMAGE" "$name"
-  tart set "$name" --cpu "$cpu" --memory "$mem" --disk "$disk"
+  tart set "$name" --cpu "$cpu" --memory "$mem" --disk-size "$disk"
   _vps_run "$name"; ok "VM running (persistent)"
 
   log "waiting for DHCP lease…"
