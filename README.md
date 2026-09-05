@@ -45,6 +45,7 @@ cp .env.example .env          # fill in DOMAIN + Cloudflare token (see docs/setu
 - [docs/architecture.md](docs/architecture.md) — how the whole thing fits together
 - [docs/setup.md](docs/setup.md) — host prep, Cloudflare token, `.env`
 - [docs/cloudflare.md](docs/cloudflare.md) — **beginner** click-by-click for the Cloudflare values
+- [docs/control-plane.md](docs/control-plane.md) — the web panel: design, routes, security, UI workflow
 - [docs/how-it-works.md](docs/how-it-works.md) — the deploy flow, step by step
 - [docs/networking.md](docs/networking.md) — pf/DHCP, the bridge, Cloudflare routing
 
