@@ -64,6 +64,13 @@ vps_deploy() {
     ok "bundle $bundle installed"
   fi
 
+  # monitoring: install the Beszel agent (reports out to the hub over the bridge). Optional.
+  if [ -n "${BESZEL_KEY:-}" ] && [ -n "${BESZEL_TOKEN:-}" ]; then
+    log "installing monitoring agent…"
+    ssh $O admin@"$ip" "curl -sL https://get.beszel.dev -o /tmp/bza.sh && chmod +x /tmp/bza.sh && sudo /tmp/bza.sh -k '${BESZEL_KEY}' -t '${BESZEL_TOKEN}' -url '${BESZEL_HUB_URL:-http://192.168.64.1:8090}' </dev/null" >/dev/null 2>&1 \
+      && ok "monitoring agent reporting to hub" || warn "beszel agent install skipped/failed"
+  fi
+
   local host=""
   if cloudflare_ready && [ -n "$app_port" ]; then
     host="$(vps_hostname "$name")"; cf_route_add "$host" "$ip" "$app_port" || warn "cloudflare route failed"

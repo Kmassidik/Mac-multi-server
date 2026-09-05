@@ -24,7 +24,6 @@ control-plane/Sources/Panel/
   Store.swift              read state/*.json, list bundles (templates/*/meta.json), call ./mms
   Auth.swift               PBKDF2-HMAC-SHA256 admin credential
   Config.swift             read .env
-  MonitorProxy.swift       reverse-proxy Netdata behind the login
 ```
 Templates use `{{TOKEN}}` placeholders; `Pages.swift` fills them and injects the data-driven
 bits (bundle cards, server cards, error/notice blocks). Swift serves `/style.css` and `/app.js`
@@ -41,14 +40,15 @@ as static files.
 | `POST /logout` | drop session, clear cookie, 302 `/` |
 | `POST /deploy` | authed + CSRF → `./mms deploy …` (background), 302 `/dashboard` |
 | `POST /destroy` | authed + CSRF → `./mms destroy <name>`, 302 `/dashboard` |
-| any host `monitor.$DOMAIN` | gated by the shared session → reverse-proxy Netdata (unauth → bounce to panel) |
+
+(`monitor.$DOMAIN` is **not** a panel route — cloudflared sends it straight to the Beszel hub, which has its own login. See [monitoring.md](monitoring.md).)
 
 ## Security
 - **Password**: PBKDF2-HMAC-SHA256, stored `0600` at `state/panel-auth.json`. Never plaintext, never in `.env`. Set once on first run (setup page).
-- **Sessions**: random token, in-memory. Cookie `mms_session` — `HttpOnly; Secure; SameSite=Lax; Domain=.$DOMAIN` (shared across `panel.`/`monitor.`).
+- **Sessions**: random token, in-memory. Cookie `mms_session` — `HttpOnly; Secure; SameSite=Lax; Domain=.$DOMAIN`.
 - **CSRF**: authed actions (deploy/destroy/logout) use a session-bound token; pre-auth forms (login/setup) use a double-submit `mms_csrf` cookie (`SameSite=Strict`). POSTs verify it.
 - **Rate limiting**: 5 failed logins per IP → 5-minute lockout. Behind cloudflared the socket peer is always `127.0.0.1`, so the **real client IP** is read from `CF-Connecting-IP` / `X-Forwarded-For`.
-- **Exposure**: binds `127.0.0.1` only; the internet reaches it via Cloudflare. The Mac itself keeps only `:22` open (pf). Monitoring (Netdata, which has no auth of its own) is never exposed directly — only through the logged-in panel.
+- **Exposure**: binds `127.0.0.1` only; the internet reaches it via Cloudflare. The Mac itself keeps only `:22` open (pf). Monitoring is separate — the Beszel hub has its own login and is routed directly by cloudflared.
 - **Input**: VPS names validated (`^[A-Za-z0-9._-]+$`); bundle whitelisted; specs clamped — nothing from a form is passed unchecked to `tart`/shell.
 
 ## Working on the UI

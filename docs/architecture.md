@@ -13,8 +13,8 @@ pieces fit and why each choice was made.
 │  MAC STUDIO — BARE METAL host (macOS, Apple Silicon)                       │
 │                                                                            │
 │   ┌── CONTROL PLANE ─────────┐         ┌── MONITORING ──────────┐          │
-│   │  dashboard + deploy API  │         │  Netdata / Grafana     │          │
-│   │  panel.$DOMAIN           │         │  grafana.$DOMAIN       │          │
+│   │  dashboard + deploy API  │         │  Beszel hub            │          │
+│   │  panel.$DOMAIN           │         │  monitor.$DOMAIN       │          │
 │   └───────────┬──────────────┘         └────▲───▲───▲───────────┘          │
 │               │ tart clone/set/run · cloudflare route · gen creds          │
 │   cloudflared │ (routes vpsN.$DOMAIN → the VM)     │   │   │               │
@@ -23,7 +23,7 @@ pieces fit and why each choice was made.
 │   │  vps-1 (VM)  │  │ vps-2(VM)│  │ vps-3(VM)│  │ vps-N(VM)│               │
 │   │  Ubuntu      │  │  Ubuntu  │  │  Ubuntu  │  │  Ubuntu  │               │
 │   │  OpenClaw    │  │  blank   │  │ OpenClaw │  │   ...    │               │
-│   │  +netdata ───┼──┼──────────┼──┼──────────┼──┘ metrics up               │
+│   │  +bz-agent ───┼──┼──────────┼──┼──────────┼──┘ metrics up               │
 │   └──────────────┘  └──────────┘  └──────────┘                            │
 │                                                                            │
 │   (agent bundles use cloud/configured model APIs — no local GPU needed)    │
@@ -39,7 +39,7 @@ pieces fit and why each choice was made.
 | Control plane | web dashboard + deploy API | the 1-click UI; orchestrates Tart + Cloudflare |
 | Ingress | **cloudflared** + Cloudflare DNS | gives each VPS a public hostname on your domain |
 | Firewall | **pf** | only SSH open to the internet; DHCP allowed on the bridge |
-| Monitoring | **Netdata** (→ Grafana later) | live per-VPS CPU/RAM/net |
+| Monitoring | **Beszel** (hub + per-VPS agent) | live per-VPS CPU/RAM/disk/net, own login |
 | Config | **`.env`** | domain, tokens, defaults — nothing hardcoded |
 
 ## Why these choices (Apple Silicon realities)

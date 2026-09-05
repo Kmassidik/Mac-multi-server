@@ -22,7 +22,7 @@ show the DETAILS card:
    Host:  vps{n}.$DOMAIN
    App:   https://vps{n}.$DOMAIN        (if bundle exposes one)
    SSH:   ssh admin@vps{n}.$DOMAIN
-   live CPU/RAM (Netdata)
+   resources reported to the Beszel hub
 ```
 
 ## Bundles

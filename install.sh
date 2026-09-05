@@ -29,13 +29,12 @@ chmod 600 "$ENV_FILE"; load_env; ok ".env loaded"
 
 # 2. tools
 command -v brew >/dev/null || die "Homebrew required: https://brew.sh"
-log "installing tools (tart, sshpass, cloudflared, netdata)…"
+log "installing tools (tart, sshpass, cloudflared)…"
 brew trust cirruslabs/cli >/dev/null 2>&1 || true
 brew trust hudochenkov/sshpass >/dev/null 2>&1 || true
 brew list tart        >/dev/null 2>&1 || brew install cirruslabs/cli/tart
 brew list sshpass     >/dev/null 2>&1 || brew install hudochenkov/sshpass/sshpass
 brew list cloudflared >/dev/null 2>&1 || brew install cloudflared
-brew list netdata     >/dev/null 2>&1 || brew install netdata
 ok "tools: $(tart --version 2>/dev/null)"
 
 # 3. pf: allow VM DHCP  (the #1 gotcha — docs/networking.md)
@@ -71,10 +70,32 @@ if [ -f "$ROOT_DIR/control-plane/Package.swift" ]; then
   cloudflare_ready && cf_route_add "${PANEL_SUBDOMAIN:-panel}.${DOMAIN}" 127.0.0.1 "${PANEL_PORT:-8088}" || true
 fi
 
-# 6. monitoring (Netdata) — local only; exposed THROUGH the panel (login-gated)
-log "starting monitoring (Netdata)…"; brew services start netdata >/dev/null 2>&1 || true
-# monitor.$DOMAIN → the panel; the panel requires login, then proxies Netdata (127.0.0.1:19999)
-cloudflare_ready && cf_route_add "${GRAFANA_SUBDOMAIN:-monitor}.${DOMAIN}" 127.0.0.1 "${PANEL_PORT:-8088}" || true
+# 6. monitoring (Beszel hub) — self-hosted, own login; agents in each VPS report to it
+log "installing Beszel hub…"
+BZ_DIR="$HOME/.beszel"; mkdir -p "$BZ_DIR"
+os=$(uname -s | tr 'A-Z' 'a-z'); arch=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+if [ ! -x "$BZ_DIR/beszel" ]; then
+  curl -sL "https://github.com/henrygd/beszel/releases/latest/download/beszel_${os}_${arch}.tar.gz" \
+    | tar -xz -O beszel > "$BZ_DIR/beszel" && chmod +x "$BZ_DIR/beszel" && ok "beszel $("$BZ_DIR/beszel" --version 2>/dev/null | awk '{print $3}')"
+fi
+# LaunchDaemon: hub on 0.0.0.0:8090 (pf blocks it externally; reachable by VPS on the bridge + by cloudflared on localhost)
+BL=io.macmultiserver.beszel; BP="/Library/LaunchDaemons/$BL.plist"
+sudo bash -c "cat > '$BP' <<PL
+<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
+<plist version=\"1.0\"><dict>
+  <key>Label</key><string>$BL</string><key>UserName</key><string>$(id -un)</string>
+  <key>ProgramArguments</key><array><string>$BZ_DIR/beszel</string><string>serve</string><string>--http</string><string>0.0.0.0:8090</string></array>
+  <key>WorkingDirectory</key><string>$BZ_DIR</string>
+  <key>EnvironmentVariables</key><dict><key>APP_URL</key><string>https://${GRAFANA_SUBDOMAIN:-monitor}.${DOMAIN}</string></dict>
+  <key>RunAtLoad</key><true/><key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>/tmp/$BL.log</string><key>StandardErrorPath</key><string>/tmp/$BL.log</string>
+</dict></plist>"
+sudo launchctl bootout "system/$BL" 2>/dev/null || true
+sudo launchctl bootstrap system "$BP" 2>/dev/null && ok "Beszel hub on 0.0.0.0:8090" || warn "Beszel hub bootstrap failed"
+# monitor.$DOMAIN → the hub (Beszel has its own login)
+cloudflare_ready && cf_route_add "${GRAFANA_SUBDOMAIN:-monitor}.${DOMAIN}" 127.0.0.1 8090 || true
+[ -z "${BESZEL_KEY:-}" ] && warn "BESZEL_KEY/BESZEL_TOKEN not set — open monitoring, create the hub admin, then copy the key + a universal token from Settings into .env so new VPS auto-report (see docs/monitoring.md)"
 
 echo; ok "install complete."
 echo "  panel:      https://${PANEL_SUBDOMAIN:-panel}.${DOMAIN:-<domain>}"

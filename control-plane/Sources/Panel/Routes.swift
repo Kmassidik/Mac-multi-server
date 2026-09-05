@@ -89,21 +89,10 @@ func installRoutes(on server: HttpServer, auth: Auth, sessions: Sessions) {
             try $0.write([UInt8](page.utf8))
         }
     }
-    func panelURL() -> String { "https://\(Config.shared.or("PANEL_SUBDOMAIN", "panel")).\(Config.shared["DOMAIN"])/" }
     func csrfFormOK(_ req: HttpRequest) -> Bool { guard let c = csrfVal(req), !c.isEmpty else { return false }; return form(req)["csrf"] == c }
 
-    // Monitoring: panel also answers monitor.$DOMAIN — gated by the shared session, then
-    // reverse-proxied to Netdata. Unauthenticated visitors are bounced to the panel to log in
-    // (rendering a login form on this host is a dead end — it proxies everything to Netdata).
-    let mhost = monitorHost()
-    if !mhost.isEmpty {
-        server.middleware.append { req in
-            let host = (req.headers["host"] ?? "").split(separator: ":").first.map(String.init) ?? ""
-            guard host == mhost else { return nil }
-            guard auth.isConfigured, authed(req) else { return redirect(panelURL()) }
-            return proxyNetdata(req)
-        }
-    }
+    // Monitoring (Beszel) has its own login and is routed straight to its hub by cloudflared,
+    // so the panel doesn't proxy it — nothing to intercept here.
 
     func dashPage(_ req: HttpRequest) -> HttpResponse {
         guard auth.isConfigured, authed(req) else { return redirect("/") }   // protected → bounce to login

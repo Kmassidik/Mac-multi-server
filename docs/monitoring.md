@@ -1,0 +1,43 @@
+# Monitoring (Beszel)
+
+Monitoring is [**Beszel**](https://beszel.dev) — a tiny, self-hosted, multi-server monitor.
+A **hub** (dashboard) runs on the Mac; a small **agent** runs in each VPS and reports CPU / RAM
+/ disk / network back to the hub. It has its **own login**, so it's not exposed openly.
+
+## How it fits
+```
+each VPS:  beszel-agent ──(outgoing WebSocket)──► hub at http://192.168.64.1:8090  (the Mac, on the VM bridge)
+you:       https://monitor.$DOMAIN ──cloudflared──► hub 127.0.0.1:8090  (Beszel's own login)
+```
+- The **hub** is a single binary (~30 MB) in `~/.beszel`, run as a LaunchDaemon on `0.0.0.0:8090`.
+  It's bound to all interfaces so VPS agents can reach it on the bridge (`192.168.64.1:8090`),
+  but pf still blocks `:8090` from the internet — only `:22` is open. History lives in
+  `~/.beszel/pb_data` (small; low-resolution — typically well under 100 MB).
+- The **agent** connects *out* to the hub (WebSocket), so no inbound port is opened on the VPS.
+
+## First-time setup (2 minutes, once)
+`install.sh` installs and starts the hub automatically. Then:
+
+1. Open **`https://monitor.$DOMAIN`** and create the Beszel admin account (first run).
+2. Go to **Settings → Tokens** and copy a **universal token**.
+3. In the same area, copy the agent **public key** (shown in "Add System").
+4. Put both in `.env`:
+   ```
+   BESZEL_KEY=<the public key>
+   BESZEL_TOKEN=<the universal token>
+   BESZEL_HUB_URL=http://192.168.64.1:8090   # default; the Mac on the VM bridge
+   ```
+
+That's it. **Every VPS you deploy after this auto-installs the agent** and shows up in the hub —
+no per-server clicking. (VPS deployed before you set the token won't have the agent; redeploy
+or add it by hand from the hub's "Add System" dialog.)
+
+## Why Beszel (vs Netdata)
+- **Self-hosted + own login** — Netdata's agent dashboard is cloud-first and pushes you to
+  `app.netdata.cloud`; Beszel stays entirely on your metal, behind its own auth.
+- **Tiny** — ~30 MB hub + ~15 MB agents, low-res history. Netdata/Prometheus store far more.
+- **Multi-server by design** — one hub, an agent per VPS, exactly matching this platform.
+
+## Uninstall
+`./uninstall.sh` stops and removes the hub service + the `monitor.$DOMAIN` route.
+`./uninstall.sh --purge` also deletes `~/.beszel` (hub binary + history + admin).

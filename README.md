@@ -21,7 +21,7 @@ to deploy/monitor them, and Cloudflare to give each one a public hostname — no
 - **1-click deploy** — choose CPU / RAM / disk + a bundle, click, done.
 - **App bundles** — deploy blank, or pre-loaded with an agent: **OpenClaw** or **Hermes Agent**.
 - **Your domain** — `vpsN.yourdomain.com` per VPS, `panel.` for the dashboard, via Cloudflare.
-- **Monitoring** — live CPU/RAM/net per VPS (Netdata / Grafana).
+- **Monitoring** — live CPU/RAM/disk/net per VPS via **Beszel** (self-hosted hub + a tiny agent per VPS).
 - **Reproducible** — all config in `.env`; reset = wipe VMs, `git pull`, restore `.env`, run one script.
 
 ## Hard truths (Apple Silicon)
@@ -48,6 +48,7 @@ cp .env.example .env          # fill in DOMAIN + Cloudflare token (see docs/setu
 - [docs/control-plane.md](docs/control-plane.md) — the web panel: design, routes, security, UI workflow
 - [docs/how-it-works.md](docs/how-it-works.md) — the deploy flow, step by step
 - [docs/networking.md](docs/networking.md) — pf/DHCP, the bridge, Cloudflare routing
+- [docs/monitoring.md](docs/monitoring.md) — Beszel hub + per-VPS agents, first-time setup
 
 ## Layout
 ```

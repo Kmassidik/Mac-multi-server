@@ -32,9 +32,11 @@ sudo rm -f "/Library/LaunchDaemons/$PL.plist"
 pkill -f macserver-panel 2>/dev/null || true
 cloudflare_ready && cf_route_remove "${PANEL_SUBDOMAIN:-panel}.${DOMAIN}" 2>/dev/null || true
 
-# 3. monitoring
-log "removing monitoring…"
-brew services stop netdata >/dev/null 2>&1 || true
+# 3. monitoring (Beszel hub)
+log "removing monitoring (Beszel hub)…"
+sudo launchctl bootout system/io.macmultiserver.beszel 2>/dev/null || true
+sudo rm -f /Library/LaunchDaemons/io.macmultiserver.beszel.plist
+pkill -x beszel 2>/dev/null || true
 cloudflare_ready && cf_route_remove "${GRAFANA_SUBDOMAIN:-monitor}.${DOMAIN}" 2>/dev/null || true
 
 # 3b. sweep the DOMAIN clean — remove any leftover panel./monitor./vpsN. records
@@ -46,17 +48,17 @@ rm -rf "$STATE_DIR" && ok "state wiped (VPS metadata + panel login)"
 
 # 5. --purge extras
 if [ "$PURGE" = 1 ]; then
-  log "purge: cached base images + DNS helper…"
+  log "purge: cached base images + Beszel hub data + DNS helper…"
   tart list 2>/dev/null | awk '/OCI/{print $2}' | while read -r img; do tart delete "$img" 2>/dev/null && echo "  removed image $img"; done
-  printf 'server\n' | sudo -S -p '' bash -c '
-    launchctl bootout system/io.macmultiserver.dns 2>/dev/null
-    rm -f /Library/LaunchDaemons/io.macmultiserver.dns.plist' 2>/dev/null && ok "DNS helper daemon removed"
+  rm -rf "$HOME/.beszel" && ok "Beszel hub data removed (~/.beszel)"
+  sudo bash -c 'launchctl bootout system/io.macmultiserver.dns 2>/dev/null; rm -f /Library/LaunchDaemons/io.macmultiserver.dns.plist' 2>/dev/null && ok "DNS helper daemon removed"
 fi
 
 echo
-ok "uninstall complete — no VPS, no panel, no monitoring routes, no state."
+ok "uninstall complete — no VPS, no panel, no monitoring, no state."
 echo "  Left in place (remove yourself if you want):"
-echo "    brew uninstall netdata sshpass          # monitoring + key tool"
-echo "    brew uninstall cirruslabs/cli/tart      # the hypervisor"
+echo "    brew uninstall hudochenkov/sshpass/sshpass   # first-login helper"
+echo "    brew uninstall cirruslabs/cli/tart           # the hypervisor"
 echo "    # NOT cloudflared — it runs your SSH tunnel (kurnia-mac). Remove only if you're sure."
-echo "  Finally:  rm -rf \"$ROOT_DIR\"             # the repo folder itself"
+echo "    # Beszel hub binary lives in ~/.beszel (removed by --purge)."
+echo "  Finally:  rm -rf \"$ROOT_DIR\"                  # the repo folder itself"
