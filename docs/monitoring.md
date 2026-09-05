@@ -44,6 +44,26 @@ That's it. **Every VPS you deploy after this auto-installs the agent** and shows
 no per-server clicking. (VPS deployed before you set the token won't have the agent; redeploy
 or add it by hand from the hub's "Add System" dialog.)
 
+## Alerts
+Per system, open it in the hub and add alert rules (Beszel stores them in its `alerts`
+collection). Sensible defaults for a VPS:
+
+| Alert    | Threshold        | Catches |
+|----------|------------------|---------|
+| Status   | down ≥ 2 min     | agent offline / VM unreachable (complements the watchdog) |
+| CPU      | > 90% for 5 min  | runaway / pegged CPU |
+| Memory   | > 90% for 5 min  | memory pressure before OOM |
+| Disk     | > 90%            | guest filling its own disk |
+
+By default alerts are shown **in the dashboard**. To be notified elsewhere, configure a
+notification channel in Beszel (SMTP for email, or a shoutrrr/webhook URL for Slack/Discord/etc.)
+under the user's settings — without one, alerts trigger but don't send.
+
+> Alerts (notify) are distinct from the health **watchdog** (auto-restart) — see
+> [architecture.md → Failure & recovery](architecture.md#failure--recovery). The **Status** alert
+> and the watchdog overlap usefully: the watchdog tries to *fix* an unreachable VPS, the alert
+> *tells you* it happened.
+
 ## Why Beszel (vs Netdata)
 - **Self-hosted + own login** — Netdata's agent dashboard is cloud-first and pushes you to
   `app.netdata.cloud`; Beszel stays entirely on your metal, behind its own auth.
