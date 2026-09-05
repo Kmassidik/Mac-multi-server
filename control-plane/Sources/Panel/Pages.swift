@@ -34,11 +34,15 @@ enum Pages {
         let bl = Store.bundles()
 
         // environment grid: real radios (name=bundle) — active state is pure CSS (input:checked + .envcard)
-        let bundles = bl.enumerated().map { (i, b) in """
+        let bundles = bl.enumerated().map { (i, b) -> String in
+            let logoHTML = (!b.logo.isEmpty && FileManager.default.fileExists(atPath: rootURL("web" + b.logo).path))
+                ? "<img src=\"\(esc(b.logo))\" alt=\"\">" : b.icon
+            return """
             <label>
               <input type="radio" name="bundle" value="\(esc(b.key))"\(i == 0 ? " checked" : "")>
               <div class="envcard">
                 <div class="badge"></div>
+                <div class="logo">\(logoHTML)</div>
                 <span class="code">\(esc(b.code))</span>
                 <h3>\(esc(b.name))</h3>
                 <p>\(esc(b.description))</p>
@@ -78,6 +82,8 @@ enum Pages {
             }.joined()
 
         return tpl("dashboard.html", [
+            "MODE": vpsList.isEmpty ? "empty" : "has",
+            "DEPLOYTITLE": vpsList.isEmpty ? "Deploy your first server" : "Deploy a server",
             "ANNOUNCE": announce, "USER": esc(user), "MONHREF": monHref, "CSRF": esc(csrf),
             "NOTICE": notice.map { "<div class=\"notice\">\(esc($0))</div>" } ?? "",
             "OPTCOUNT": String(bl.count), "COUNT": String(vpsList.count),

@@ -5,20 +5,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/style.css">
-</head><body>
+</head><body class="{{MODE}}">
 <div class="announce">{{ANNOUNCE}}</div>
 <div class="shell">
   <aside class="side">
     <div class="logo"><div class="sq"></div><span>Platform</span></div>
     <nav>
-      <div>
-        <h3>Infrastructure</h3>
-        <a class="on" href="/dashboard">Deployments</a>
-      </div>
-      <div>
-        <h3>Monitoring</h3>
-        <a href="{{MONHREF}}" target="_blank">Metrics &amp; logs</a>
-      </div>
+      <div><h3>Infrastructure</h3><a class="on" href="/dashboard">Deployments</a></div>
+      <div><h3>Monitoring</h3><a href="{{MONHREF}}" target="_blank">Metrics &amp; logs</a></div>
     </nav>
     <div class="usr">
       <div class="row"><span>{{USER}}</span><span class="on">ONLINE</span></div>
@@ -29,36 +23,36 @@
   <main class="main">
     <div class="mobilebar"><div class="lg"><div class="sq"></div>Platform</div></div>
     <div class="content">
-      <div class="hero">
-        <h1>Operational<br>problems,<br>answered with<br><span class="g">working software.</span></h1>
-        <p>Provision, scale, and monitor servers on your own metal — one Mac, many servers.</p>
-      </div>
-
       {{NOTICE}}
 
-      <form method="post" action="/deploy">
-        <input type="hidden" name="csrf" value="{{CSRF}}">
-        <div class="block">
-          <div class="sec"><h2>1 · Select environment</h2><span class="meta">{{OPTCOUNT}} AVAILABLE</span></div>
+      <!-- DEPLOY (shown when there are no servers, or when the + button is pressed) -->
+      <section class="deploy-section">
+        <form method="post" action="/deploy">
+          <input type="hidden" name="csrf" value="{{CSRF}}">
+          <div class="sec">
+            <h2>{{DEPLOYTITLE}}</h2>
+            <span class="meta">{{OPTCOUNT}} AVAILABLE</span>
+            <button type="button" class="closebtn" onclick="closeDeploy()">✕ Close</button>
+          </div>
           <div class="envgrid">{{BUNDLES}}</div>
-        </div>
-        <div class="block">
-          <div class="sec"><h2>2 · Provision resources</h2></div>
           <div class="provision">
             <div><label>Compute (vCPU)</label><input type="number" name="cpu" value="{{CPU}}" min="1" max="16"></div>
             <div><label>Memory (MB)</label><input type="number" name="mem" value="{{MEM}}" step="1024" min="512"></div>
             <div><label>Storage (GB)</label><input type="number" name="disk" value="{{DISK}}" step="10" min="10"></div>
           </div>
-        </div>
-        <div class="deploy"><button class="btn" type="submit">Execute deployment</button></div>
-      </form>
+          <div class="deploy"><button class="btn" type="submit">Execute deployment</button></div>
+        </form>
+      </section>
 
-      <div class="block" style="margin-top:88px">
-        <div class="sec"><h2>Active topology</h2><span class="count">{{COUNT}} ONLINE</span></div>
+      <!-- ACTIVE SERVERS (shown when at least one exists) -->
+      <section class="topology-section">
+        <div class="sec"><h2>Active servers</h2><span class="count">{{COUNT}} ONLINE</span></div>
         <div class="topology">{{SERVERS}}</div>
-      </div>
+      </section>
     </div>
   </main>
 </div>
+
+<button class="fab" onclick="openDeploy()" aria-label="Deploy a new server">+ New server</button>
 <script src="/app.js"></script>
 </body></html>

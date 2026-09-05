@@ -1,6 +1,10 @@
 // Mac-multi-server panel — minimal progressive enhancement.
 // (Bundle selection is pure CSS: input:checked + .envcard. No JS needed for it.)
 
+// deploy panel toggle (populated view: FAB opens the form, ✕ closes it)
+function openDeploy(){ document.body.classList.add('show-deploy'); window.scrollTo(0,0); }
+function closeDeploy(){ document.body.classList.remove('show-deploy'); }
+
 // show / hide password
 document.querySelectorAll('.eye').forEach(function (b) {
   b.addEventListener('click', function () {

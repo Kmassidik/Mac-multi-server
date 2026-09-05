@@ -22,6 +22,7 @@ struct Bundle {
     var name: String
     var code: String
     var icon: String
+    var logo: String      // URL path like /logos/x.svg; used only if the file exists (else icon)
     var description: String
 }
 
@@ -40,6 +41,7 @@ enum Store {
                           name: meta["name"] ?? key.capitalized,
                           code: meta["code"] ?? key.uppercased(),
                           icon: meta["icon"] ?? "📦",
+                          logo: meta["logo"] ?? "",
                           description: meta["description"] ?? "")
         }
     }
