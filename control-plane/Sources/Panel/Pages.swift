@@ -1,6 +1,7 @@
 import Foundation
 
-/// Server-rendered HTML. No framework. Graphite + machined-amber "control plane" identity.
+/// Server-rendered HTML. Light identity matched to vantis.sh:
+/// white ground, black text, spring-green accent, geometric grotesque, green highlighter.
 enum Pages {
     static func esc(_ s: String) -> String {
         s.replacingOccurrences(of: "&", with: "&amp;")
@@ -13,53 +14,48 @@ enum Pages {
     <meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>
     <link rel='preconnect' href='https://fonts.googleapis.com'>
     <link rel='preconnect' href='https://fonts.gstatic.com' crossorigin>
-    <link href='https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap' rel='stylesheet'>
+    <link href='https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap' rel='stylesheet'>
     <style>
     :root{
-      --bg:#0b0d11; --grid:#111520; --surface:#13171e; --surface2:#171c25; --line:#242b36;
-      --fg:#e8ebf1; --muted:#8a93a2; --accent:#e0a13a; --accent2:#eab253; --ok:#5fd39a; --danger:#ff6b6b;
-      --sans:'IBM Plex Sans',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace;
+      --bg:#ffffff; --soft:#f6f8f6; --line:#e6e8e6; --fg:#0a0b0a; --muted:#6b7280;
+      --green:#5fe490; --green-h:#4ad97f; --danger:#e5484d;
+      --disp:'Space Grotesk',system-ui,sans-serif; --sans:'Inter',system-ui,sans-serif;
     }
     *{box-sizing:border-box} html,body{height:100%}
-    body{margin:0;color:var(--fg);font-family:var(--sans);
-      background:
-        radial-gradient(1100px 520px at 50% -12%, rgba(224,161,58,.07), transparent 60%),
-        linear-gradient(var(--grid) 1px, transparent 1px) 0 0/44px 44px,
-        linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0/44px 44px,
-        var(--bg);}
-    a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
-    .auth{min-height:100%;display:grid;place-items:center;padding:24px}
-    .card{width:100%;max-width:400px;background:var(--surface);border:1px solid var(--line);
-      border-radius:16px;padding:30px;box-shadow:0 30px 70px -24px rgba(0,0,0,.7)}
-    .plate{display:flex;align-items:center;gap:9px;margin-bottom:4px}
-    .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 3px rgba(95,211,154,.16)}
-    h1{margin:0;font-weight:700;font-size:21px;letter-spacing:-.015em}
-    .host{font-family:var(--mono);font-size:12px;color:var(--muted);margin:2px 0 22px}
-    .lead{color:var(--muted);font-size:14px;margin:0 0 20px}
-    label{display:block;font-size:12px;font-weight:500;color:var(--muted);margin:14px 0 6px}
+    body{margin:0;color:var(--fg);font-family:var(--sans);background:var(--bg)}
+    a{color:var(--fg)} a:hover{opacity:.7}
+    .mark{background:var(--green);padding:.02em .18em;border-radius:4px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+    .pill{display:inline-block;background:var(--green);color:#0a0b0a;font-family:var(--sans);
+      font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:5px 11px;border-radius:999px}
+    .auth{min-height:100%;display:grid;place-items:center;padding:24px;background:
+      radial-gradient(900px 420px at 50% -10%, rgba(95,228,144,.14), transparent 70%), var(--bg)}
+    .card{width:100%;max-width:410px;background:#fff;border:1px solid var(--line);
+      border-radius:18px;padding:32px;box-shadow:0 20px 50px -24px rgba(10,11,10,.18)}
+    .wordmark{font-family:var(--disp);font-weight:700;font-size:24px;letter-spacing:-.02em;margin:14px 0 2px;display:flex;align-items:center;gap:9px}
+    .dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(95,228,144,.28)}
+    .sub{color:var(--muted);font-size:14px;margin:0 0 22px}
+    label{display:block;font-size:13px;font-weight:500;color:var(--fg);margin:15px 0 6px}
     .inp{position:relative}
-    input{width:100%;background:#0e131a;border:1px solid var(--line);border-radius:10px;
-      padding:11px 42px 11px 13px;color:var(--fg);font:400 14px var(--sans)}
-    input::placeholder{color:#5b636f}
-    input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(224,161,58,.16)}
+    input{width:100%;background:#fff;border:1px solid #d8dcd8;border-radius:11px;
+      padding:12px 44px 12px 13px;color:var(--fg);font:400 15px var(--sans)}
+    input::placeholder{color:#9aa3a0}
+    input:focus{outline:none;border-color:var(--green-h);box-shadow:0 0 0 3px rgba(95,228,144,.3)}
     .eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:0;
-      color:var(--muted);cursor:pointer;padding:7px;border-radius:8px;line-height:0}
-    .eye:hover{color:var(--fg)} .eye:focus-visible{outline:2px solid var(--accent)}
-    button.go{width:100%;margin-top:20px;background:var(--accent);color:#1c1305;font:600 14px var(--sans);
-      border:0;border-radius:10px;padding:12px;cursor:pointer;transition:background .15s}
-    button.go:hover{background:var(--accent2)} button.go:disabled{opacity:.45;cursor:not-allowed}
-    .hint{font-size:12px;color:var(--muted);margin-top:7px;min-height:15px}
-    .hint.ok{color:var(--ok)} .hint.no{color:var(--danger)}
-    .err{background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.35);color:#ffb0b0;
-      font-size:13px;border-radius:9px;padding:9px 11px;margin-bottom:16px}
+      color:var(--muted);cursor:pointer;padding:8px;border-radius:8px;line-height:0}
+    .eye:hover{color:var(--fg)} .eye:focus-visible{outline:2px solid var(--green-h)}
+    button.go{width:100%;margin-top:22px;background:var(--green);color:#0a0b0a;font:600 15px var(--sans);
+      border:0;border-radius:11px;padding:13px;cursor:pointer;transition:background .15s}
+    button.go:hover{background:var(--green-h)} button.go:disabled{opacity:.5;cursor:not-allowed}
+    .hint{font-size:13px;color:var(--muted);margin-top:8px;min-height:16px}
+    .hint.ok{color:#1a8f4a} .hint.no{color:var(--danger)}
+    .err{background:#fdeaea;border:1px solid #f6c9ca;color:#a3282c;font-size:13px;border-radius:10px;padding:10px 12px;margin-bottom:16px}
     @media (prefers-reduced-motion:reduce){*{transition:none!important}}
     </style>
     """
 
-    // eye toggle button (SVG). Sits right after an <input type=password>.
     static let eye = """
     <button type='button' class='eye' aria-label='Show password' aria-pressed='false'>
-    <svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z'/><circle cx='12' cy='12' r='3'/></svg>
+    <svg width='19' height='19' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z'/><circle cx='12' cy='12' r='3'/></svg>
     </button>
     """
 
@@ -76,15 +72,13 @@ enum Pages {
         "<!doctype html><html lang='en'><head><title>\(title)</title>\(head)</head><body>\(body)</body></html>"
     }
 
-    static func plate(_ line: String) -> String {
-        "<div class='plate'><span class='dot'></span><h1>Mac-multi-server</h1></div><div class='host'>\(esc(line))</div>"
-    }
-
     static func setup(error: String?) -> String {
         let user = Config.shared.or("PANEL_ADMIN_USER", "admin")
         return shell("Set up · Mac-multi-server", """
         <div class='auth'><div class='card'>
-          \(plate("first run · create your admin login"))
+          <span class='pill'>Control plane</span>
+          <div class='wordmark'><span class='dot'></span>Mac-multi-server</div>
+          <p class='sub'>First run — create your <span class='mark'>admin login</span>.</p>
           \(error.map { "<div class='err'>\(esc($0))</div>" } ?? "")
           <form method='post' action='/setup'>
             <label for='u'>Username</label>
@@ -114,7 +108,9 @@ enum Pages {
     static func login(error: String?) -> String {
         shell("Sign in · Mac-multi-server", """
         <div class='auth'><div class='card'>
-          \(plate("sign in to manage your servers"))
+          <span class='pill'>Control plane</span>
+          <div class='wordmark'><span class='dot'></span>Mac-multi-server</div>
+          <p class='sub'>Sign in to manage your <span class='mark'>servers</span>.</p>
           \(error.map { "<div class='err'>\(esc($0))</div>" } ?? "")
           <form method='post' action='/login'>
             <label for='u'>Username</label>
@@ -128,32 +124,35 @@ enum Pages {
         """)
     }
 
-    // Dashboard styles (kept lightweight; same tokens as the auth pages).
     static let dashCSS = """
     <style>
-    .wrap{max-width:1000px;margin:0 auto;padding:26px 24px}
-    header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:22px}
-    header .who{color:var(--muted);font-size:13px;margin-top:3px}
-    .btn{font:500 13px var(--sans);border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:9px;padding:8px 12px;cursor:pointer}
-    .btn:hover{border-color:#333c48}
-    .btn.accent{background:var(--accent);border-color:var(--accent);color:#1c1305;font-weight:600}
-    .btn.accent:hover{background:var(--accent2)}
-    .btn.danger{border-color:rgba(255,107,107,.4);color:var(--danger);background:transparent}
-    .panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:20px}
-    .panel h2{font-size:14px;margin:0 0 14px}
-    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:end}.row>div{flex:1;min-width:110px}
+    .wrap{max-width:1040px;margin:0 auto;padding:26px 24px}
+    header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:22px}
+    .brand{font-family:var(--disp);font-weight:700;font-size:20px;letter-spacing:-.02em;display:flex;align-items:center;gap:9px}
+    .who{color:var(--muted);font-size:13px;margin-top:4px}
+    .btn{font:500 13px var(--sans);border:1px solid #d8dcd8;background:#fff;color:var(--fg);border-radius:10px;padding:9px 13px;cursor:pointer}
+    .btn:hover{border-color:#0a0b0a}
+    .btn.accent{background:var(--green);border-color:var(--green);color:#0a0b0a;font-weight:600}
+    .btn.accent:hover{background:var(--green-h)}
+    .btn.danger{border-color:#f0c4c5;color:var(--danger);background:#fff}
+    .btn.danger:hover{border-color:var(--danger)}
+    .panel{background:var(--soft);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:22px}
+    .panel h2{font-family:var(--disp);font-weight:600;font-size:16px;margin:0 0 15px}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:end}.row>div{flex:1;min-width:112px}
     .row label{margin-top:0}
-    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
-    .vps{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
-    .vps .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-    .vps b{font-size:15px}
-    .tag{font-size:11px;padding:2px 9px;border-radius:20px;border:1px solid var(--line);color:var(--muted)}
-    .tag.run{color:var(--ok);border-color:rgba(95,211,154,.4)} .tag.dep{color:var(--accent2);border-color:rgba(224,161,58,.4)}
-    .kv{font-size:13px;margin:5px 0;color:var(--fg)} .kv b{color:var(--muted);font-weight:500;display:inline-block;width:52px;font-size:12px}
-    code{font-family:var(--mono);font-size:12px;background:#0e131a;border:1px solid var(--line);border-radius:6px;padding:1px 6px}
-    .notice{background:rgba(224,161,58,.08);border:1px solid rgba(224,161,58,.35);color:var(--accent2);border-radius:10px;padding:11px 13px;margin-bottom:18px;font-size:13px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:16px}
+    .vps{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px}
+    .vps .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}
+    .vps b{font-family:var(--disp);font-weight:600;font-size:16px}
+    .tag{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:3px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+    .tag.run{background:var(--green);border-color:var(--green);color:#0a0b0a} .tag.dep{background:#fff4d6;border-color:#f0d998;color:#8a6d1a}
+    .kv{font-size:13px;margin:5px 0} .kv b{color:var(--muted);font-weight:500;display:inline-block;width:52px;font-size:12px}
+    code{font-family:ui-monospace,'SF Mono',monospace;font-size:12px;background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:1px 6px}
+    .notice{background:rgba(95,228,144,.16);border:1px solid var(--green);color:#146a37;border-radius:11px;padding:11px 13px;margin-bottom:18px;font-size:13px}
     .empty{color:var(--muted);text-align:center;padding:34px}
-    select,.wrap input{width:100%;background:#0e131a;border:1px solid var(--line);border-radius:9px;padding:9px 11px;color:var(--fg);font:400 14px var(--sans)}
+    label{font-size:12px;color:var(--muted);font-weight:500}
+    select,.wrap input{width:100%;background:#fff;border:1px solid #d8dcd8;border-radius:10px;padding:10px 11px;color:var(--fg);font:400 14px var(--sans)}
+    select:focus,.wrap input:focus{outline:none;border-color:var(--green-h);box-shadow:0 0 0 3px rgba(95,228,144,.3)}
     </style>
     """
 
@@ -166,7 +165,7 @@ enum Pages {
         let monLink = (!mon.isEmpty && !dom.isEmpty) ? " · <a href='https://\(esc(mon)).\(esc(dom))' target='_blank'>monitoring</a>" : ""
 
         let cards = vpsList.isEmpty
-            ? "<div class='vps empty'>No servers yet. Deploy one above.</div>"
+            ? "<div class='vps empty'>No servers yet — deploy one above.</div>"
             : vpsList.map { v in
                 let tag = v.status == "running" ? "tag run" : (v.status == "deploying" ? "tag dep" : "tag")
                 let host = v.hostname.isEmpty ? "" : "<div class='kv'><b>Host</b> <a href='https://\(esc(v.hostname))' target='_blank'>\(esc(v.hostname))</a></div>"
@@ -189,7 +188,10 @@ enum Pages {
         return shell("Mac-multi-server", dashCSS + """
         <div class='wrap'>
           <header>
-            <div>\(plate("\(esc(user))\(monLink)"))</div>
+            <div>
+              <div class='brand'><span class='dot'></span>Mac-multi-server</div>
+              <div class='who'>\(esc(user))\(monLink)</div>
+            </div>
             <form method='post' action='/logout'><input type='hidden' name='csrf' value='\(csrf)'><button class='btn'>Sign out</button></form>
           </header>
           \(notice.map { "<div class='notice'>\(esc($0))</div>" } ?? "")
