@@ -93,6 +93,11 @@ sudo bash -c "cat > '$BP' <<PL
 </dict></plist>"
 sudo launchctl bootout "system/$BL" 2>/dev/null || true
 sudo launchctl bootstrap system "$BP" 2>/dev/null && ok "Beszel hub on 0.0.0.0:8090" || warn "Beszel hub bootstrap failed"
+# create/update the hub admin from .env (skip the first-run web form)
+if [ -n "${BESZEL_ADMIN_EMAIL:-}" ] && [ -n "${BESZEL_ADMIN_PASSWORD:-}" ]; then
+  ( cd "$BZ_DIR" && ./beszel superuser upsert "$BESZEL_ADMIN_EMAIL" "$BESZEL_ADMIN_PASSWORD" ) >/dev/null 2>&1 \
+    && ok "Beszel admin set from .env ($BESZEL_ADMIN_EMAIL)" || warn "Beszel admin upsert failed (password must be ≥8 chars)"
+fi
 # monitor.$DOMAIN → the hub (Beszel has its own login)
 cloudflare_ready && cf_route_add "${GRAFANA_SUBDOMAIN:-monitor}.${DOMAIN}" 127.0.0.1 8090 || true
 [ -z "${BESZEL_KEY:-}" ] && warn "BESZEL_KEY/BESZEL_TOKEN not set — open monitoring, create the hub admin, then copy the key + a universal token from Settings into .env so new VPS auto-report (see docs/monitoring.md)"

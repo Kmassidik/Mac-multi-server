@@ -16,12 +16,19 @@ you:       https://monitor.$DOMAIN ──cloudflared──► hub 127.0.0.1:8090
 - The **agent** connects *out* to the hub (WebSocket), so no inbound port is opened on the VPS.
 
 ## First-time setup (2 minutes, once)
-`install.sh` installs and starts the hub automatically. Then:
+`install.sh` installs and starts the hub automatically, and **creates the hub admin from `.env`**
+so you skip Beszel's first-run web form:
 
-1. Open **`https://monitor.$DOMAIN`** and create the Beszel admin account (first run).
-2. Go to **Settings → Tokens** and copy a **universal token**.
-3. In the same area, copy the agent **public key** (shown in "Add System").
-4. Put both in `.env`:
+```
+BESZEL_ADMIN_EMAIL=you@example.com
+BESZEL_ADMIN_PASSWORD=change-me-8+chars   # must be ≥8 chars
+```
+
+Log in at **`https://monitor.$DOMAIN`** with those, then wire up auto-reporting agents:
+
+1. Go to **Settings → Tokens** and copy a **universal token**.
+2. In the same area, copy the agent **public key** (shown in "Add System").
+3. Put both in `.env`:
    ```
    BESZEL_KEY=<the public key>
    BESZEL_TOKEN=<the universal token>

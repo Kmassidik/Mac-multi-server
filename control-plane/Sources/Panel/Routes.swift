@@ -113,6 +113,20 @@ func installRoutes(on server: HttpServer, auth: Auth, sessions: Sessions) {
     }
     server.GET["/style.css"] = { _ in staticFile("style.css", "text/css; charset=utf-8") }
     server.GET["/app.js"]   = { _ in staticFile("app.js", "application/javascript; charset=utf-8") }
+    // bundle logos (served locally, not hotlinked). Basename only — no path traversal.
+    server.GET["/logos/:file"] = { req in
+        let f = req.params[":file"] ?? ""
+        guard f.range(of: "^[A-Za-z0-9_-]+\\.(svg|png|webp|jpg|jpeg)$", options: .regularExpression) != nil else { return .notFound }
+        let ctype: String
+        switch (f as NSString).pathExtension.lowercased() {
+        case "svg":         ctype = "image/svg+xml"
+        case "png":         ctype = "image/png"
+        case "webp":        ctype = "image/webp"
+        case "jpg","jpeg":  ctype = "image/jpeg"
+        default:            ctype = "application/octet-stream"
+        }
+        return staticFile("logos/\(f)", ctype)
+    }
 
     server.POST["/setup"] = { req in
         guard !auth.isConfigured else { return redirect("/") }
