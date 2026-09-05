@@ -153,14 +153,28 @@ enum Pages {
     label{font-size:12px;color:var(--muted);font-weight:500}
     select,.wrap input{width:100%;background:#fff;border:1px solid #d8dcd8;border-radius:10px;padding:10px 11px;color:var(--fg);font:400 14px var(--sans)}
     select:focus,.wrap input:focus{outline:none;border-color:var(--green-h);box-shadow:0 0 0 3px rgba(95,228,144,.3)}
+    .bundles{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:18px}
+    .bcard{position:relative;border:1.5px solid var(--line);border-radius:15px;padding:16px;cursor:pointer;background:#fff;transition:border-color .12s,background .12s}
+    .bcard:hover{border-color:#c4c9c4}
+    .bcard.sel{border-color:var(--green-h);background:rgba(95,228,144,.09)}
+    .bcard .ico{font-size:28px;line-height:1;margin-bottom:10px}
+    .bcard .bn{font-family:var(--disp);font-weight:600;font-size:15px}
+    .bcard .bd{color:var(--muted);font-size:12.5px;margin-top:5px;line-height:1.5}
+    .bcard .rdo{position:absolute;top:14px;right:14px;width:18px;height:18px;border-radius:50%;border:1.5px solid #cfd4cf}
+    .bcard.sel .rdo{border-color:var(--green-h);background:var(--green);box-shadow:inset 0 0 0 3px #fff}
     </style>
     """
 
     static func dashboard(user: String, vpsList: [VPS], csrf: String, notice: String?) -> String {
         let jump = Config.shared["PANEL_SSH_JUMP"]
-        let bundles = Config.shared.or("BUNDLES", "blank,openclaw,hermes")
-            .split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
-        let opts = bundles.map { "<option value='\(esc($0))'>\(esc($0))</option>" }.joined()
+        let bl = Store.bundles()
+        let firstKey = bl.first?.key ?? "blank"
+        let bcards = bl.enumerated().map { (i, b) in """
+            <div class='bcard\(i == 0 ? " sel" : "")' data-key='\(esc(b.key))' role='radio' aria-checked='\(i == 0)' tabindex='0'>
+              <div class='rdo'></div><div class='ico'>\(b.icon)</div>
+              <div class='bn'>\(esc(b.name))</div><div class='bd'>\(esc(b.description))</div>
+            </div>
+            """ }.joined()
         let mon = Config.shared["GRAFANA_SUBDOMAIN"], dom = Config.shared["DOMAIN"]
         let monLink = (!mon.isEmpty && !dom.isEmpty) ? " · <a href='https://\(esc(mon)).\(esc(dom))' target='_blank'>monitoring</a>" : ""
 
@@ -199,8 +213,9 @@ enum Pages {
             <h2>Deploy a server</h2>
             <form method='post' action='/deploy'>
               <input type='hidden' name='csrf' value='\(csrf)'>
+              <input type='hidden' name='bundle' id='bundle' value='\(esc(firstKey))'>
+              <div class='bundles'>\(bcards)</div>
               <div class='row'>
-                <div><label>Bundle</label><select name='bundle'>\(opts)</select></div>
                 <div><label>vCPU</label><input name='cpu' type='number' value='\(Config.shared.or("VPS_DEFAULT_CPU","2"))' min='1' max='16'></div>
                 <div><label>RAM (MB)</label><input name='mem' type='number' value='\(Config.shared.or("VPS_DEFAULT_MEM_MB","4096"))' min='512'></div>
                 <div><label>Disk (GB)</label><input name='disk' type='number' value='\(Config.shared.or("VPS_DEFAULT_DISK_GB","40"))' min='10'></div>
@@ -210,6 +225,10 @@ enum Pages {
           </div>
           <div class='grid'>\(cards)</div>
         </div>
+        <script>
+        (function(){var cards=document.querySelectorAll('.bcard');function pick(c){cards.forEach(function(x){x.classList.remove('sel');x.setAttribute('aria-checked','false');});c.classList.add('sel');c.setAttribute('aria-checked','true');document.getElementById('bundle').value=c.dataset.key;}
+        cards.forEach(function(c){c.addEventListener('click',function(){pick(c);});c.addEventListener('keydown',function(e){if(e.key===' '||e.key==='Enter'){e.preventDefault();pick(c);}});});})();
+        </script>
         """)
     }
 }

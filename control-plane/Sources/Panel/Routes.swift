@@ -66,20 +66,25 @@ func installRoutes(on server: HttpServer, auth: Auth, sessions: Sessions) {
         }
     }
 
-    server.GET["/"] = { req in
+    func dashPage(_ req: HttpRequest) -> HttpResponse {
         if !auth.isConfigured { return html(Pages.setup(error: nil)) }
         guard authed(req) else { return html(Pages.login(error: nil)) }
         let notice = req.queryParams.first(where: { $0.0 == "notice" })?.1
         return html(Pages.dashboard(user: auth.username() ?? "admin",
                                     vpsList: Store.list(), csrf: token(req) ?? "", notice: notice))
     }
+    server.GET["/"] = { req in
+        if !auth.isConfigured { return html(Pages.setup(error: nil)) }
+        return authed(req) ? redirect("/dashboard") : html(Pages.login(error: nil))
+    }
+    server.GET["/dashboard"] = { req in dashPage(req) }
 
     server.POST["/setup"] = { req in
         guard !auth.isConfigured else { return redirect("/") }
         let f = form(req); let u = f["username"] ?? "", p = f["password"] ?? "", c = f["confirm"] ?? ""
         guard !u.isEmpty, p.count >= 8, p == c else { return html(Pages.setup(error: "Password must be ≥8 chars and match.")) }
         do { try auth.set(username: u, password: p) } catch { return html(Pages.setup(error: "Could not save: \(error)")) }
-        return redirect("/", cookie: setCookie(sessions.new()))
+        return redirect("/dashboard", cookie: setCookie(sessions.new()))
     }
 
     server.POST["/login"] = { req in
@@ -87,7 +92,7 @@ func installRoutes(on server: HttpServer, auth: Auth, sessions: Sessions) {
         if sessions.lockedOut(ip) { return html(Pages.login(error: "Too many attempts. Wait a few minutes.")) }
         let f = form(req)
         if auth.verify(username: f["username"] ?? "", password: f["password"] ?? "") {
-            sessions.clearFail(ip); return redirect("/", cookie: setCookie(sessions.new()))
+            sessions.clearFail(ip); return redirect("/dashboard", cookie: setCookie(sessions.new()))
         }
         sessions.recordFail(ip); usleep(400_000)
         return html(Pages.login(error: "Invalid username or password"))
@@ -105,12 +110,12 @@ func installRoutes(on server: HttpServer, auth: Auth, sessions: Sessions) {
                      cpu:  Int(f["cpu"]  ?? "") ?? 2,
                      mem:  Int(f["mem"]  ?? "") ?? 4096,
                      disk: Int(f["disk"] ?? "") ?? 40)
-        return redirect("/?notice=Deploying%20a%20new%20VPS%E2%80%A6%20refresh%20in%20~1%20min.")
+        return redirect("/dashboard?notice=Deploying%20a%20new%20VPS%E2%80%A6%20refresh%20in%20~1%20min.")
     }
 
     server.POST["/destroy"] = { req in
         guard authed(req), csrfOK(req) else { return redirect("/") }
         Store.destroy(name: form(req)["name"] ?? "")
-        return redirect("/?notice=Destroying%20VPS%E2%80%A6")
+        return redirect("/dashboard?notice=Destroying%20VPS%E2%80%A6")
     }
 }

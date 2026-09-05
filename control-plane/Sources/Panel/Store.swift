@@ -16,8 +16,31 @@ struct VPS: Codable {
 
 /// Reads VPS state and drives the `mms` CLI. The panel never re-implements the
 /// engine — it calls the same command you'd run by hand.
+/// A deploy bundle, from templates/<key>/meta.json.
+struct Bundle {
+    var key: String
+    var name: String
+    var icon: String
+    var description: String
+}
+
 enum Store {
     static var stateDir: URL { rootURL("state") }
+
+    /// Bundles offered at deploy time — the BUNDLES list in .env, enriched from each
+    /// templates/<key>/meta.json (name, icon, description).
+    static func bundles() -> [Bundle] {
+        let keys = Config.shared.or("BUNDLES", "blank,openclaw,hermes")
+            .split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        return keys.map { key in
+            let meta = (try? Data(contentsOf: rootURL("templates/\(key)/meta.json")))
+                .flatMap { try? JSONDecoder().decode([String: String].self, from: $0) } ?? [:]
+            return Bundle(key: key,
+                          name: meta["name"] ?? key.capitalized,
+                          icon: meta["icon"] ?? "📦",
+                          description: meta["description"] ?? "")
+        }
+    }
 
     static func list() -> [VPS] {
         guard let files = try? FileManager.default.contentsOfDirectory(at: stateDir,
