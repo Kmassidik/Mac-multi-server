@@ -62,6 +62,16 @@ vps_deploy() {
   label="$(printf '%s' "$label" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr -d '\000-\037')"
   [[ "$cpu" =~ ^[0-9]+$ && "$mem" =~ ^[0-9]+$ && "$disk" =~ ^[0-9]+$ ]] || die "cpu/mem/disk must be numbers"
   [ "$bundle" = blank ] || [ -d "$TEMPLATES_DIR/$bundle" ] || die "unknown bundle: $bundle"
+
+  # host free-disk guard — VMs are sparse clones, but many can still exhaust the Mac's disk,
+  # which endangers ALL VPS. Refuse to deploy below a floor. (df -g: field 4 = available GB.)
+  local free_gb margin min_free need
+  free_gb="$(df -g / 2>/dev/null | awk 'NR==2{print $4}')"
+  margin="${VPS_DISK_MARGIN_GB:-10}"; min_free="${VPS_MIN_FREE_GB:-20}"
+  need="$(( disk + margin ))"; [ "$need" -lt "$min_free" ] && need="$min_free"
+  if [[ "$free_gb" =~ ^[0-9]+$ ]] && [ "$free_gb" -lt "$need" ]; then
+    die "not enough host disk: ${free_gb}GB free, need ~${need}GB (disk ${disk}GB + ${margin}GB margin). Free space or lower --disk."
+  fi
   [ -f "$VPS_SSH_PUBKEY" ] || die "no ssh pubkey at $VPS_SSH_PUBKEY (set VPS_SSH_PUBKEY in .env)"
   local KEY; KEY="$(cat "$VPS_SSH_PUBKEY")"
 
