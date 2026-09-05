@@ -149,7 +149,8 @@ enum Pages {
     .kv{font-size:13px;margin:5px 0} .kv b{color:var(--muted);font-weight:500;display:inline-block;width:52px;font-size:12px}
     code{font-family:ui-monospace,'SF Mono',monospace;font-size:12px;background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:1px 6px}
     .notice{background:rgba(95,228,144,.16);border:1px solid var(--green);color:#146a37;border-radius:11px;padding:11px 13px;margin-bottom:18px;font-size:13px}
-    .empty{color:var(--muted);text-align:center;padding:34px}
+    .empty{color:var(--muted);text-align:center;padding:44px;grid-column:1/-1}
+    .sec{font-family:var(--disp);font-weight:600;font-size:16px;margin:0 0 14px}
     label{font-size:12px;color:var(--muted);font-weight:500}
     select,.wrap input{width:100%;background:#fff;border:1px solid #d8dcd8;border-radius:10px;padding:10px 11px;color:var(--fg);font:400 14px var(--sans)}
     select:focus,.wrap input:focus{outline:none;border-color:var(--green-h);box-shadow:0 0 0 3px rgba(95,228,144,.3)}
@@ -223,6 +224,7 @@ enum Pages {
               </div>
             </form>
           </div>
+          <h2 class='sec'>Servers</h2>
           <div class='grid'>\(cards)</div>
         </div>
         <script>
