@@ -35,10 +35,11 @@ Log in at **`https://monitor.$DOMAIN`** with those, then wire up auto-reporting 
 2. In the same area, copy the agent **public key** (shown in "Add System").
 3. Put both in `.env`:
    ```
-   BESZEL_KEY=<the public key>
+   BESZEL_KEY="<the public key>"   # quote it — the key contains a space (ssh-ed25519 AAAA…)
    BESZEL_TOKEN=<the universal token>
    BESZEL_HUB_URL=http://192.168.64.1:8090   # default; the Mac on the VM bridge
    ```
+   `.env` is sourced by the shell, so any value with a space must be quoted or `mms` will error.
 
 That's it. **Every VPS you deploy after this auto-installs the agent** and shows up in the hub —
 no per-server clicking. (VPS deployed before you set the token won't have the agent; redeploy
