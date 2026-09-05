@@ -4,6 +4,11 @@ Monitoring is [**Beszel**](https://beszel.dev) — a tiny, self-hosted, multi-se
 A **hub** (dashboard) runs on the Mac; a small **agent** runs in each VPS and reports CPU / RAM
 / disk / network back to the hub. It has its **own login**, so it's not exposed openly.
 
+> **Beszel vs the watchdog — distinct roles.** Beszel is **metrics/alerting**: it shows and alerts
+> on resource usage, but it doesn't act on a VPS. Auto-**recovery** (probe + restart unhealthy VMs)
+> is the separate health watchdog — see
+> [architecture.md → Failure & recovery](architecture.md#failure--recovery).
+
 ## How it fits
 ```
 each VPS:  beszel-agent ──(outgoing WebSocket)──► hub at http://192.168.64.1:8090  (the Mac, on the VM bridge)

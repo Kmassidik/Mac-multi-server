@@ -53,6 +53,9 @@ cp .env.example .env
 ```
 
 ## Security notes
-- Only **:22** is exposed to the internet (pf drops the rest). VPS are reached via Cloudflare / ProxyJump.
+- The platform opens **no inbound port** — cloudflared reaches Cloudflare outbound, and VPS are
+  reached by domain SSH (`ssh admin@vpsN.$DOMAIN`) through the tunnel, no jump host. pf stays
+  default-deny inbound (the `pf-fix` rule only affects the internal VM bridge). See
+  [networking.md](networking.md).
 - Scope the Cloudflare token to the single zone; rotate it if it ever leaks.
 - Keep `.env` at `chmod 600`.

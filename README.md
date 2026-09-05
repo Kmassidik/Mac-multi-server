@@ -4,11 +4,11 @@
 
 A self-hosted, 1-click VPS platform that runs on a single Apple Silicon Mac (bare metal).
 Pick specs + an app bundle (e.g. OpenClaw), hit **Deploy**, and in ~30s you get a real
-Linux VPS — its own OS, IP, SSH, and resource quotas — reachable on your own domain via
-Cloudflare. Like a DigitalOcean droplet, but on your own metal.
+Linux VPS — its own OS, kernel, SSH, and resource quotas — reachable **by domain** through
+Cloudflare, with no IP ever exposed. Like a DigitalOcean droplet, but on your own metal.
 
 ```
-panel.yourdomain.com  →  [ Deploy ]  →  vps7.yourdomain.com   (Ubuntu + OpenClaw, live in ~30s)
+panel.yourdomain.com  →  [ Deploy ]  →  ssh admin@vps7.yourdomain.com   (Ubuntu + OpenClaw, live in ~30s)
 ```
 
 ## Why
@@ -20,7 +20,13 @@ to deploy/monitor them, and Cloudflare to give each one a public hostname — no
 - **Real VPS** — each is a genuine Linux VM (own kernel), not a shared container.
 - **1-click deploy** — choose CPU / RAM / disk + a bundle, click, done.
 - **App bundles** — deploy blank, or pre-loaded with an agent: **OpenClaw** or **Hermes Agent**.
-- **Your domain** — `vpsN.yourdomain.com` per VPS, `panel.` for the dashboard, via Cloudflare.
+- **Domain SSH, no IPs** — reach a VPS with `ssh admin@vpsN.yourdomain.com` through the Cloudflare
+  tunnel (one-time `~/.ssh/config` cloudflared snippet). No public or internal IP, no jump host.
+- **Manage from the panel** — a per-VPS detail page with specs, copy-paste SSH, **rename** (a Name
+  tag; the id stays `vps-N`), **Restart / Stop / Start / Terminate**, and a **web terminal** (xterm.js
+  in the browser, straight to the VM).
+- **Self-healing** — a health watchdog probes each VPS and auto-restarts the unhealthy, with a
+  back-off so a genuinely broken VM is flagged "flapping" instead of restarted forever.
 - **Monitoring** — live CPU/RAM/disk/net per VPS via **Beszel** (self-hosted hub + a tiny agent per VPS).
 - **Reproducible** — all config in `.env`; reset = wipe VMs, `git pull`, restore `.env`, run one script.
 
@@ -36,9 +42,9 @@ to deploy/monitor them, and Cloudflare to give each one a public hostname — no
 ```bash
 git clone <this repo> ~/mac-multi-server && cd ~/mac-multi-server
 cp .env.example .env          # fill in DOMAIN + Cloudflare token (see docs/setup.md)
-./install.sh       # install Tart, fix pf for DHCP, build+run the panel, wire cloudflared
+./install.sh       # install Tart, fix pf for DHCP, build+run the panel, watchdog, monitoring, wire cloudflared
 ./mms deploy --bundle openclaw --cpu 2 --mem 4096 --disk 40
-# → prints the VPS details: hostname, SSH, app URL
+# → prints the VPS details: status, specs, SSH-by-domain, and the panel manage/terminal URL
 ```
 
 ## Docs
@@ -54,10 +60,10 @@ cp .env.example .env          # fill in DOMAIN + Cloudflare token (see docs/setu
 ```
 install.sh       one-shot host setup (clone → ./install.sh)
 uninstall.sh     clean teardown (--purge for images too) — wipes clean like docker/nix
-mms              the CLI: deploy · destroy · ls · logs · pf-fix
-lib/             sourced helpers: common · pf · cloudflare · vps
+mms              the CLI: deploy · destroy · restart · stop · start · watchdog · ls · logs · pf-fix
+lib/             sourced helpers: common · pf · cloudflare · vps · watchdog
 templates/       VPS bundles: blank/, openclaw/, hermes/
-control-plane/   native Swift panel (login + dashboard) → macserver-panel
+control-plane/   native Swift panel (login + dashboard + per-VPS detail page + web terminal) → macserver-panel
 flake.nix        `nix develop` for the CLI tooling (cloudflared, sshpass, jq)
 docs/            architecture & guides
 .env.example     config template (copy to .env)
@@ -72,6 +78,8 @@ Both the CLI (`./mms`) and the web panel call the **same** engine in `lib/` — 
 Everything the platform created is removed; your `.env` and the repo folder stay until you delete them.
 
 ## Status
-Early build. Proof-of-concept validated: Tart Linux VM boots on the metal, pf DHCP rule
-required (scripted here), key-based SSH works. Building the scripted, domain-fronted
-platform now.
+Working end-to-end. One-command install; 1-click deploy of real Linux VMs on the metal;
+domain-only SSH (no IP exposed) + in-browser web terminal; a web panel with per-VPS detail,
+rename, and restart/stop/start; a health watchdog that auto-restarts unhealthy VMs (with
+back-off); Beszel monitoring; a host free-disk guard; and clean install/uninstall. Actively
+evolving — see [docs/](docs/).
