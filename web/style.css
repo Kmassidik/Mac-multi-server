@@ -180,6 +180,8 @@ body.show-deploy .fab{display:none}
 .hint.sub2{margin:12px 0 8px;min-height:0;font-family:var(--sans);font-weight:300;font-size:12px;color:var(--m60);line-height:1.6}
 .hint.sub2 a{text-decoration:underline}
 .hint.sub2 code{font-family:var(--mono);background:var(--gray);padding:1px 4px}
+.controls{display:flex;gap:12px;margin:0;flex-wrap:wrap}
+.controls form{margin:0}
 form.inline{display:flex;gap:12px;margin:0}
 form.inline input{flex:1;background:transparent;border:0;border-bottom:1px solid var(--gray);font-family:var(--mono);font-size:14px;padding:8px 0;color:var(--black)}
 form.inline input:focus{border-bottom-color:var(--black)}

@@ -130,6 +130,9 @@ enum Pages {
             "SSH": esc(ssh),
             "SSHSETUP": sshSetup,
             "CREATED": esc(v.created),
+            // manual controls: Stop shows when running, Start when stopped; Restart always.
+            "STOPHIDE":  v.status == "stopped" ? "hidden" : "",
+            "STARTHIDE": v.status == "stopped" ? "" : "hidden",
             "MONHREF": monHref,
             "CSRF": esc(csrf),
             "NOTICE": notice.map { "<div class=\"notice\">\(esc($0))</div>" } ?? "",

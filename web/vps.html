@@ -66,6 +66,22 @@
             <button class="btn line" type="submit">Save</button>
           </form>
 
+          <label class="fld">Controls</label>
+          <div class="controls">
+            <form method="post" action="/vps/{{NAME}}/restart" onsubmit="return confirm('Restart {{DISPLAY}}? The VM will reboot.')">
+              <input type="hidden" name="csrf" value="{{CSRF}}">
+              <button class="btn line" type="submit">Restart</button>
+            </form>
+            <form method="post" action="/vps/{{NAME}}/stop" {{STOPHIDE}}>
+              <input type="hidden" name="csrf" value="{{CSRF}}">
+              <button class="btn line" type="submit">Stop</button>
+            </form>
+            <form method="post" action="/vps/{{NAME}}/start" {{STARTHIDE}}>
+              <input type="hidden" name="csrf" value="{{CSRF}}">
+              <button class="btn line" type="submit">Start</button>
+            </form>
+          </div>
+
           <label class="fld danger-label">Danger zone</label>
           <form method="post" action="/destroy" onsubmit="return confirm('Destroy {{DISPLAY}}? This is permanent.')">
             <input type="hidden" name="csrf" value="{{CSRF}}"><input type="hidden" name="name" value="{{NAME}}">

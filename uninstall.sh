@@ -22,6 +22,13 @@ if [ -d "$STATE_DIR" ]; then
   for f in "$STATE_DIR"/vps-*.json; do [ -e "$f" ] || continue; vps_destroy "$(basename "$f" .json)" || true; done
 fi
 
+# 1b. health watchdog (gui-domain LaunchAgent) + per-VPS health sidecars
+log "removing health watchdog…"
+WD=io.macmultiserver.watchdog
+launchctl bootout "gui/$(id -u)/$WD" 2>/dev/null || true
+rm -f "$HOME/Library/LaunchAgents/$WD.plist"
+[ -d "$STATE_DIR" ] && rm -f "$STATE_DIR"/*.health 2>/dev/null || true
+
 # 2. control-plane panel (LaunchDaemon now; also clean the old LaunchAgent form)
 log "removing control plane…"
 PL=io.macmultiserver.panel

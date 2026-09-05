@@ -5,10 +5,36 @@
 _launch_label(){ echo "io.macmultiserver.$1"; }
 _launch_plist(){ echo "$HOME/Library/LaunchAgents/$(_launch_label "$1").plist"; }
 
+# Resolve tart's binary with an absolute-path fallback — LaunchAgents (watchdog, per-VPS
+# agents) run with a minimal PATH where a bare `tart` may not be found.
+_tart_bin(){
+  local t; t="$(command -v tart 2>/dev/null || true)"
+  if [ -z "$t" ]; then for c in /opt/homebrew/bin/tart /usr/local/bin/tart; do
+    [ -x "$c" ] && { t="$c"; break; }; done; fi
+  echo "$t"
+}
+
+# Set the `status` field inside STATE_DIR/<name>.json, preserving every other field
+# (read-modify-write via python3). Used by the lifecycle fns and the watchdog.
+_vps_set_status(){ # <name> <status>
+  local f="$STATE_DIR/$1.json"
+  [ -f "$f" ] || return 0
+  python3 - "$f" "$2" >/dev/null 2>&1 <<'PY' || true
+import json,sys
+f,st=sys.argv[1],sys.argv[2]
+try:
+    d=json.load(open(f))
+except Exception:
+    sys.exit(0)
+d["status"]=st
+json.dump(d,open(f,"w"))
+PY
+}
+
 # run a VM persistently via launchd (survives reboot); fall back to nohup.
 _vps_run() {
   local name="$1" label plist tart; label="$(_launch_label "$name")"; plist="$(_launch_plist "$name")"
-  tart="$(command -v tart)"
+  tart="$(_tart_bin)"
   cat > "$plist" <<PL
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -108,6 +134,51 @@ vps_destroy() {
   tart delete "$name" 2>/dev/null && ok "VM deleted" || warn "tart delete: nothing to remove"
   rm -f "$STATE_DIR/$name.json"
   ok "$name destroyed (no residue)"
+}
+
+# ── lifecycle: restart / stop / start ────────────────────────
+# These drive the per-VPS LaunchAgent (io.macmultiserver.<name>) in the gui/$(id -u)
+# domain, so launchctl works without sudo. tart is resolved with an absolute-path fallback.
+
+# vps_restart <name> — graceful tart stop, then kickstart the LaunchAgent (SIGKILL+relaunch
+# of `tart run`). KeepAlive stays intact for the normal case.
+vps_restart(){
+  local name="$1"; valid_name "$name"
+  local label tart; label="$(_launch_label "$name")"; tart="$(_tart_bin)"
+  log "restarting $name…"
+  [ -n "$tart" ] && "$tart" stop "$name" >/dev/null 2>&1 || true
+  launchctl kickstart -k "gui/$(id -u)/$label" 2>/dev/null \
+    || warn "kickstart failed for $label (agent not bootstrapped?)"
+  _vps_set_status "$name" "running"
+  ok "$name restarted"
+}
+
+# vps_stop <name> — bootout the LaunchAgent (so KeepAlive won't relaunch) then stop the VM.
+# The plist is kept so vps_start can bring it back.
+vps_stop(){
+  local name="$1"; valid_name "$name"
+  local label tart; label="$(_launch_label "$name")"; tart="$(_tart_bin)"
+  log "stopping $name…"
+  launchctl bootout "gui/$(id -u)/$label" 2>/dev/null || true
+  [ -n "$tart" ] && "$tart" stop "$name" >/dev/null 2>&1 || true
+  _vps_set_status "$name" "stopped"
+  ok "$name stopped"
+}
+
+# vps_start <name> — re-bootstrap the existing plist (fall back to _vps_run if it's gone).
+vps_start(){
+  local name="$1"; valid_name "$name"
+  local label plist; label="$(_launch_label "$name")"; plist="$(_launch_plist "$name")"
+  log "starting $name…"
+  if [ -f "$plist" ]; then
+    launchctl bootstrap "gui/$(id -u)" "$plist" 2>/dev/null \
+      || launchctl kickstart -k "gui/$(id -u)/$label" 2>/dev/null \
+      || warn "start via launchd failed for $label"
+  else
+    warn "no plist for $name — recreating"; _vps_run "$name"
+  fi
+  _vps_set_status "$name" "running"
+  ok "$name started"
 }
 
 # vps_list — one line per VPS

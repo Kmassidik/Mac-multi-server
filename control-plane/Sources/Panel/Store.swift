@@ -113,6 +113,24 @@ enum Store {
         mms(["destroy", name])
     }
 
+    /// Graceful restart of a VPS (stop the VM, relaunch its LaunchAgent). Fire-and-forget.
+    static func restart(name: String) {
+        guard validName(name) else { return }
+        mms(["restart", name])
+    }
+
+    /// Stop a VPS (bootout its agent so it won't auto-restart). Fire-and-forget.
+    static func stop(name: String) {
+        guard validName(name) else { return }
+        mms(["stop", name])
+    }
+
+    /// Start a stopped VPS (re-bootstrap its agent). Fire-and-forget.
+    static func start(name: String) {
+        guard validName(name) else { return }
+        mms(["start", name])
+    }
+
     /// Run `./mms <args>` from the repo root, detached.
     private static func mms(_ args: [String]) {
         let p = Process()

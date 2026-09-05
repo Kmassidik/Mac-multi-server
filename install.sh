@@ -70,6 +70,33 @@ if [ -f "$ROOT_DIR/control-plane/Package.swift" ]; then
   cloudflare_ready && cf_route_add "${PANEL_SUBDOMAIN:-panel}.${DOMAIN}" 127.0.0.1 "${PANEL_PORT:-8088}" || true
 fi
 
+# 5b. health watchdog — a LaunchAgent in the gui/$(id -u) domain (same domain as the per-VPS
+# agents) so it can `launchctl kickstart/bootout/bootstrap gui/UID/...` them WITHOUT sudo.
+# It runs `mms watchdog` every WATCHDOG_INTERVAL seconds: probe each running VPS, restart the
+# unhealthy (with a fail threshold + restart back-off), and reflect real health in the dashboard.
+log "installing health watchdog…"
+WD=io.macmultiserver.watchdog; WDP="$HOME/Library/LaunchAgents/$WD.plist"
+mkdir -p "$HOME/Library/LaunchAgents"
+cat > "$WDP" <<PL
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>$WD</string>
+  <key>ProgramArguments</key><array>
+    <string>/bin/bash</string><string>$ROOT_DIR/mms</string><string>watchdog</string>
+  </array>
+  <key>WorkingDirectory</key><string>$ROOT_DIR</string>
+  <key>StartInterval</key><integer>${WATCHDOG_INTERVAL:-60}</integer>
+  <key>RunAtLoad</key><true/>
+  <key>StandardOutPath</key><string>/tmp/$WD.log</string>
+  <key>StandardErrorPath</key><string>/tmp/$WD.log</string>
+</dict></plist>
+PL
+launchctl bootout "gui/$(id -u)/$WD" 2>/dev/null || true
+launchctl bootstrap "gui/$(id -u)" "$WDP" 2>/dev/null \
+  && ok "watchdog active (every ${WATCHDOG_INTERVAL:-60}s → /tmp/$WD.log)" \
+  || warn "watchdog LaunchAgent bootstrap failed"
+
 # 6. monitoring (Beszel hub) — self-hosted, own login; agents in each VPS report to it
 log "installing Beszel hub…"
 BZ_DIR="$HOME/.beszel"; mkdir -p "$BZ_DIR"
@@ -105,4 +132,5 @@ cloudflare_ready && cf_route_add "${GRAFANA_SUBDOMAIN:-monitor}.${DOMAIN}" 127.0
 echo; ok "install complete."
 echo "  panel:      https://${PANEL_SUBDOMAIN:-panel}.${DOMAIN:-<domain>}"
 echo "  monitoring: https://${GRAFANA_SUBDOMAIN:-monitor}.${DOMAIN:-<domain>}"
+echo "  watchdog:   active — health check + auto-restart every ${WATCHDOG_INTERVAL:-60}s (log: /tmp/io.macmultiserver.watchdog.log)"
 echo "  deploy:     ./mms deploy --bundle openclaw"

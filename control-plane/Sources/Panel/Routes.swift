@@ -160,6 +160,29 @@ func installRoutes(on server: HttpServer, auth: Auth, sessions: Sessions) {
         return redirect("/vps/\(name)?notice=Renamed")
     }
 
+    // manual lifecycle controls — restart / stop / start (same engine as `mms`)
+    server.POST["/vps/:name/restart"] = { req in
+        guard authed(req), csrfOK(req) else { return redirect("/") }
+        let name = req.params[":name"] ?? ""
+        guard Store.get(name) != nil else { return redirect("/dashboard") }
+        Store.restart(name: name)
+        return redirect("/vps/\(name)?notice=Restarting%E2%80%A6")
+    }
+    server.POST["/vps/:name/stop"] = { req in
+        guard authed(req), csrfOK(req) else { return redirect("/") }
+        let name = req.params[":name"] ?? ""
+        guard Store.get(name) != nil else { return redirect("/dashboard") }
+        Store.stop(name: name)
+        return redirect("/vps/\(name)?notice=Stopping%E2%80%A6")
+    }
+    server.POST["/vps/:name/start"] = { req in
+        guard authed(req), csrfOK(req) else { return redirect("/") }
+        let name = req.params[":name"] ?? ""
+        guard Store.get(name) != nil else { return redirect("/dashboard") }
+        Store.start(name: name)
+        return redirect("/vps/\(name)?notice=Starting%E2%80%A6")
+    }
+
     // ── Web terminal: browser ⇄ (this WebSocket) ⇄ ssh-in-a-pty ⇄ VPS ──
     // One PTYBridge per connection. Auth via the session cookie; Origin-checked.
     server["/vps/:name/term"] = { req -> HttpResponse in
