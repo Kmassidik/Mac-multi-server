@@ -55,23 +55,20 @@ enum Pages {
         let announce = dom.isEmpty ? "MAC-MULTI-SERVER · CONTROL PLANE" : "MAC-MULTI-SERVER · \(esc(dom.uppercased()))"
 
         let servers = vpsList.isEmpty
-            ? "<div class=\"empty\">// NO INSTANCES PROVISIONED IN CURRENT CLUSTER</div>"
+            ? "<div class=\"empty\">No servers deployed yet — deploy one above.</div>"
             : vpsList.map { v in
                 let host = v.hostname.isEmpty ? "" : " · <a href=\"https://\(esc(v.hostname))\" target=\"_blank\" onclick=\"event.stopPropagation()\">\(esc(v.hostname))</a>"
                 let named = (v.label?.isEmpty == false)
                 let idline = named ? "\(esc(v.name)) · " : ""
                 let tag = v.status == "running" ? "tag run" : "tag"
                 return """
-                <div class="vps" onclick="location.href='/vps/\(esc(v.name))'">
-                  <div class="id">
-                    <div class="live"></div>
-                    <div>
-                      <div class="nm">\(esc(v.display))</div>
-                      <div class="sub">\(idline)\(esc(v.bundle)) · \(v.cpu) vCPU · \(v.mem_mb) MB · \(v.disk_gb) GB · \(esc(v.ip))\(host)</div>
-                    </div>
-                  </div>
-                  <div class="right">
+                <div class="srvcard" onclick="location.href='/vps/\(esc(v.name))'">
+                  <div class="top">
+                    <div class="nm">\(esc(v.display))</div>
                     <span class="\(tag)">\(esc(v.status))</span>
+                  </div>
+                  <div class="sub">\(idline)\(esc(v.bundle))<br>\(v.cpu) vCPU · \(v.mem_mb) MB · \(v.disk_gb) GB<br>\(esc(v.ip))\(host)</div>
+                  <div class="acts">
                     <a class="btn line" href="/vps/\(esc(v.name))" onclick="event.stopPropagation()">Manage ↗</a>
                     <form method="post" action="/destroy" onclick="event.stopPropagation()" onsubmit="return confirm('Destroy \(esc(v.display))? This is permanent.')">
                       <input type="hidden" name="csrf" value="\(csrf)"><input type="hidden" name="name" value="\(esc(v.name))">

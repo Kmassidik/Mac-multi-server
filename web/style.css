@@ -55,6 +55,7 @@ input:focus{outline:none}
 .content{padding-top:56px}
 .deploy-section,.topology-section{display:none}
 body.empty .deploy-section{display:block}
+body.empty .topology-section{display:block}   /* keep active-servers area visible (with text empty-state) even at 0 */
 body.has .topology-section{display:block}
 body.show-deploy .deploy-section{display:block}
 body.show-deploy .topology-section{display:none}
@@ -98,22 +99,22 @@ body.show-deploy .fab{display:none}
 .btn.line{background:transparent;border-color:var(--gray);font-weight:400;padding:8px 16px;letter-spacing:.1em;font-size:11px}
 .btn.line:hover{background:transparent;border-color:var(--black);color:var(--black)}
 
-/* active topology */
+/* active topology — 3-column card grid (hairline aesthetic like .envgrid) */
 .count{font-family:var(--mono);font-size:11px;background:var(--black);color:var(--white);padding:2px 8px}
-.topology{border:1px solid var(--gray)}
-.topology .empty{font-family:var(--mono);font-size:13px;color:var(--m40);text-align:center;padding:48px}
-.vps{border-bottom:1px solid var(--gray);padding:20px 24px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
-.vps:last-child{border-bottom:0}
-.vps:hover{background:rgba(229,229,229,.25)}
-.vps .id{display:flex;align-items:center;gap:20px}
-.vps .live{width:7px;height:7px;background:var(--green);box-shadow:0 0 8px var(--green)}
-.vps .nm{font-family:var(--mono);font-weight:700;font-size:14px;margin-bottom:4px}
-.vps .sub{font-family:var(--mono);font-size:11px;color:var(--m50)}
-.vps .sub a{color:var(--black);text-decoration:underline}
-.vps .right{display:flex;align-items:center;gap:24px;font-family:var(--mono)}
-.vps .tag{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--m50)}
-.vps .tag.run{color:var(--black)} .vps .tag.run::before{content:"● ";color:var(--green)}
-.vps form{margin:0}
+.topology{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--gray);border:1px solid var(--gray)}
+.topology .empty{grid-column:1 / -1;font-family:var(--mono);font-size:13px;color:var(--m40);text-align:center;padding:48px;background:var(--white)}
+.srvcard{background:var(--white);padding:22px 24px;display:flex;flex-direction:column;gap:14px;min-width:0;cursor:pointer}
+.srvcard:hover{background:rgba(229,229,229,.25)}
+.srvcard .top{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.srvcard .nm{font-family:var(--mono);font-weight:700;font-size:14px;min-width:0;overflow-wrap:anywhere}
+.srvcard .tag{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--m50);white-space:nowrap;flex:0 0 auto}
+.srvcard .tag.run{color:var(--black)} .srvcard .tag.run::before{content:"● ";color:var(--green)}
+.srvcard .sub{font-family:var(--mono);font-size:11px;color:var(--m50);line-height:1.7;overflow-wrap:anywhere}
+.srvcard .sub a{color:var(--black);text-decoration:underline}
+.srvcard .acts{display:flex;gap:12px;margin-top:auto;padding-top:4px;flex-wrap:wrap}
+.srvcard form{margin:0}
+@media (max-width:900px){.topology{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:600px){.topology{grid-template-columns:1fr}}
 .notice{border:1px solid var(--green);background:rgba(0,245,109,.1);font-family:var(--mono);font-size:12px;padding:12px 16px;margin-bottom:32px}
 
 /* ── auth pages (setup / login) — same language, centered, no sidebar ── */
@@ -163,10 +164,10 @@ body.show-deploy .fab{display:none}
 .panel .sec{margin-bottom:20px}
 
 .kv{margin:0;font-family:var(--mono);font-size:13px}
-.kv>div{display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px dotted var(--gray)}
+.kv>div{display:flex;justify-content:space-between;align-items:baseline;gap:24px;padding:10px 0;border-bottom:1px dotted var(--gray)}
 .kv>div:last-child{border-bottom:0}
-.kv dt{color:var(--m50);text-transform:uppercase;font-size:11px;letter-spacing:.1em}
-.kv dd{margin:0;color:var(--black);text-align:right;word-break:break-all}
+.kv dt{flex:0 0 auto;color:var(--m50);text-transform:uppercase;font-size:11px;letter-spacing:.1em}
+.kv dd{flex:1 1 auto;min-width:0;margin:0;color:var(--black);text-align:right;overflow-wrap:anywhere}
 .kv dd a{text-decoration:underline} .muted{color:var(--m40)}
 
 .fld{display:block;font-family:var(--mono);font-size:11px;color:var(--m50);text-transform:uppercase;letter-spacing:.14em;margin:24px 0 8px}
