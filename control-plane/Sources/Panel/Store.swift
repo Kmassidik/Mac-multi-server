@@ -20,6 +20,7 @@ struct VPS: Codable {
 struct Bundle {
     var key: String
     var name: String
+    var code: String
     var icon: String
     var description: String
 }
@@ -37,6 +38,7 @@ enum Store {
                 .flatMap { try? JSONDecoder().decode([String: String].self, from: $0) } ?? [:]
             return Bundle(key: key,
                           name: meta["name"] ?? key.capitalized,
+                          code: meta["code"] ?? key.uppercased(),
                           icon: meta["icon"] ?? "📦",
                           description: meta["description"] ?? "")
         }

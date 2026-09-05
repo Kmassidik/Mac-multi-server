@@ -1,5 +1,5 @@
-// Mac-multi-server panel — small progressive-enhancement JS.
-// Each block guards on element presence, so one file works across setup/login/dashboard.
+// Mac-multi-server panel — minimal progressive enhancement.
+// (Bundle selection is pure CSS: input:checked + .envcard. No JS needed for it.)
 
 // show / hide password
 document.querySelectorAll('.eye').forEach(function (b) {
@@ -26,18 +26,4 @@ document.querySelectorAll('.eye').forEach(function (b) {
     else { h.textContent = ''; h.className = 'hint'; g.disabled = true; }
   }
   p.addEventListener('input', chk); c.addEventListener('input', chk); chk();
-})();
-
-// dashboard: bundle card selection -> hidden input
-(function () {
-  var cards = document.querySelectorAll('.bcard'), field = document.getElementById('bundle');
-  if (!cards.length || !field) return;
-  function pick(c) {
-    cards.forEach(function (x) { x.classList.remove('sel'); x.setAttribute('aria-checked', 'false'); });
-    c.classList.add('sel'); c.setAttribute('aria-checked', 'true'); field.value = c.dataset.key;
-  }
-  cards.forEach(function (c) {
-    c.addEventListener('click', function () { pick(c); });
-    c.addEventListener('keydown', function (e) { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); pick(c); } });
-  });
 })();

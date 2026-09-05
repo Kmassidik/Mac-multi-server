@@ -1,1 +1,1 @@
-{ "name": "Blank Ubuntu", "icon": "🖥️", "description": "A clean Ubuntu 24.04 server — nothing installed. Your blank canvas." }
+{ "name": "Blank Ubuntu", "code": "OS-01", "icon": "🖥️", "description": "Clean Ubuntu 24.04 LTS. Zero dependencies — your blank canvas." }

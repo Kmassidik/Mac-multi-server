@@ -32,44 +32,56 @@ enum Pages {
     static func dashboard(user: String, vpsList: [VPS], csrf: String, notice: String?) -> String {
         let jump = Config.shared["PANEL_SSH_JUMP"]
         let bl = Store.bundles()
-        let firstKey = bl.first?.key ?? "blank"
 
+        // environment grid: real radios (name=bundle) — active state is pure CSS (input:checked + .envcard)
         let bundles = bl.enumerated().map { (i, b) in """
-            <div class="bcard\(i == 0 ? " sel" : "")" data-key="\(esc(b.key))" role="radio" aria-checked="\(i == 0)" tabindex="0">
-              <div class="rdo"></div><div class="ico">\(b.icon)</div>
-              <div class="bn">\(esc(b.name))</div><div class="bd">\(esc(b.description))</div>
-            </div>
+            <label>
+              <input type="radio" name="bundle" value="\(esc(b.key))"\(i == 0 ? " checked" : "")>
+              <div class="envcard">
+                <div class="badge"></div>
+                <span class="code">\(esc(b.code))</span>
+                <h3>\(esc(b.name))</h3>
+                <p>\(esc(b.description))</p>
+              </div>
+            </label>
             """ }.joined()
 
         let mon = Config.shared["GRAFANA_SUBDOMAIN"], dom = Config.shared["DOMAIN"]
-        let monLink = (!mon.isEmpty && !dom.isEmpty)
-            ? " · <a href=\"https://\(esc(mon)).\(esc(dom))\" target=\"_blank\">monitoring</a>" : ""
+        let monHref = (!mon.isEmpty && !dom.isEmpty) ? "https://\(esc(mon)).\(esc(dom))" : "#"
+        let announce = dom.isEmpty ? "MAC-MULTI-SERVER · CONTROL PLANE" : "MAC-MULTI-SERVER · \(esc(dom.uppercased()))"
 
         let servers = vpsList.isEmpty
-            ? "<div class=\"vps empty\">No servers yet — deploy one above.</div>"
+            ? "<div class=\"empty\">// NO INSTANCES PROVISIONED IN CURRENT CLUSTER</div>"
             : vpsList.map { v in
-                let tag = v.status == "running" ? "tag run" : (v.status == "deploying" ? "tag dep" : "tag")
-                let host = v.hostname.isEmpty ? "" : "<div class=\"kv\"><b>Host</b> <a href=\"https://\(esc(v.hostname))\" target=\"_blank\">\(esc(v.hostname))</a></div>"
+                let host = v.hostname.isEmpty ? "" : " · <a href=\"https://\(esc(v.hostname))\" target=\"_blank\">\(esc(v.hostname))</a>"
                 let ssh = "ssh -J \(jump.isEmpty ? "&lt;mac&gt;" : esc(jump)) admin@\(esc(v.ip))"
+                let tag = v.status == "running" ? "tag run" : "tag"
                 return """
                 <div class="vps">
-                  <div class="top"><b>\(esc(v.name))</b><span class="\(tag)">\(esc(v.status))</span></div>
-                  <div class="kv" style="color:var(--muted)">Ubuntu · \(v.cpu) vCPU · \(v.mem_mb) MB · \(v.disk_gb) GB · \(esc(v.bundle))</div>
-                  <div class="kv"><b>IP</b> <code>\(esc(v.ip))</code></div>
-                  \(host)
-                  <div class="kv"><b>SSH</b> <code>\(ssh)</code></div>
-                  <form method="post" action="/destroy" onsubmit="return confirm('Destroy \(esc(v.name))? This is permanent.')" style="margin-top:12px">
-                    <input type="hidden" name="csrf" value="\(csrf)"><input type="hidden" name="name" value="\(esc(v.name))">
-                    <button class="btn danger" type="submit">Destroy</button>
-                  </form>
+                  <div class="id">
+                    <div class="live"></div>
+                    <div>
+                      <div class="nm">\(esc(v.name))</div>
+                      <div class="sub">\(esc(v.bundle)) · \(v.cpu) vCPU · \(v.mem_mb) MB · \(v.disk_gb) GB · \(esc(v.ip))\(host)</div>
+                      <div class="sub">\(ssh)</div>
+                    </div>
+                  </div>
+                  <div class="right">
+                    <span class="\(tag)">\(esc(v.status))</span>
+                    <form method="post" action="/destroy" onsubmit="return confirm('Destroy \(esc(v.name))? This is permanent.')">
+                      <input type="hidden" name="csrf" value="\(csrf)"><input type="hidden" name="name" value="\(esc(v.name))">
+                      <button class="btn line" type="submit">Terminate</button>
+                    </form>
+                  </div>
                 </div>
                 """
             }.joined()
 
         return tpl("dashboard.html", [
-            "USER": esc(user), "MONLINK": monLink, "CSRF": esc(csrf),
+            "ANNOUNCE": announce, "USER": esc(user), "MONHREF": monHref, "CSRF": esc(csrf),
             "NOTICE": notice.map { "<div class=\"notice\">\(esc($0))</div>" } ?? "",
-            "BUNDLES": bundles, "FIRSTBUNDLE": esc(firstKey),
+            "OPTCOUNT": String(bl.count), "COUNT": String(vpsList.count),
+            "BUNDLES": bundles,
             "CPU": esc(Config.shared.or("VPS_DEFAULT_CPU", "2")),
             "MEM": esc(Config.shared.or("VPS_DEFAULT_MEM_MB", "4096")),
             "DISK": esc(Config.shared.or("VPS_DEFAULT_DISK_GB", "40")),

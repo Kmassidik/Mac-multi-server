@@ -3,34 +3,62 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Mac-multi-server</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/style.css">
 </head><body>
-<div class="wrap">
-  <header>
-    <div>
-      <div class="brand"><span class="dot"></span>Mac-multi-server</div>
-      <div class="who">{{USER}}{{MONLINK}}</div>
-    </div>
-    <form method="post" action="/logout"><input type="hidden" name="csrf" value="{{CSRF}}"><button class="btn">Sign out</button></form>
-  </header>
-  {{NOTICE}}
-  <div class="panel">
-    <h2>Deploy a server</h2>
-    <form method="post" action="/deploy">
-      <input type="hidden" name="csrf" value="{{CSRF}}">
-      <input type="hidden" name="bundle" id="bundle" value="{{FIRSTBUNDLE}}">
-      <div class="bundles">{{BUNDLES}}</div>
-      <div class="row">
-        <div><label>vCPU</label><input name="cpu" type="number" value="{{CPU}}" min="1" max="16"></div>
-        <div><label>RAM (MB)</label><input name="mem" type="number" value="{{MEM}}" min="512"></div>
-        <div><label>Disk (GB)</label><input name="disk" type="number" value="{{DISK}}" min="10"></div>
-        <div style="flex:0"><label>&nbsp;</label><button class="btn accent" type="submit">Deploy</button></div>
+<div class="announce">{{ANNOUNCE}}</div>
+<div class="shell">
+  <aside class="side">
+    <div class="logo"><div class="sq"></div><span>Platform</span></div>
+    <nav>
+      <div>
+        <h3>Infrastructure</h3>
+        <a class="on" href="/dashboard">Deployments</a>
       </div>
-    </form>
-  </div>
-  <h2 class="sec">Servers</h2>
-  <div class="grid">{{SERVERS}}</div>
+      <div>
+        <h3>Monitoring</h3>
+        <a href="{{MONHREF}}" target="_blank">Metrics &amp; logs</a>
+      </div>
+    </nav>
+    <div class="usr">
+      <div class="row"><span>{{USER}}</span><span class="on">ONLINE</span></div>
+      <form method="post" action="/logout"><input type="hidden" name="csrf" value="{{CSRF}}"><button>Sign out</button></form>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="mobilebar"><div class="lg"><div class="sq"></div>Platform</div></div>
+    <div class="content">
+      <div class="hero">
+        <h1>Operational<br>problems,<br>answered with<br><span class="g">working software.</span></h1>
+        <p>Provision, scale, and monitor servers on your own metal — one Mac, many servers.</p>
+      </div>
+
+      {{NOTICE}}
+
+      <form method="post" action="/deploy">
+        <input type="hidden" name="csrf" value="{{CSRF}}">
+        <div class="block">
+          <div class="sec"><h2>1 · Select environment</h2><span class="meta">{{OPTCOUNT}} AVAILABLE</span></div>
+          <div class="envgrid">{{BUNDLES}}</div>
+        </div>
+        <div class="block">
+          <div class="sec"><h2>2 · Provision resources</h2></div>
+          <div class="provision">
+            <div><label>Compute (vCPU)</label><input type="number" name="cpu" value="{{CPU}}" min="1" max="16"></div>
+            <div><label>Memory (MB)</label><input type="number" name="mem" value="{{MEM}}" step="1024" min="512"></div>
+            <div><label>Storage (GB)</label><input type="number" name="disk" value="{{DISK}}" step="10" min="10"></div>
+          </div>
+        </div>
+        <div class="deploy"><button class="btn" type="submit">Execute deployment</button></div>
+      </form>
+
+      <div class="block" style="margin-top:88px">
+        <div class="sec"><h2>Active topology</h2><span class="count">{{COUNT}} ONLINE</span></div>
+        <div class="topology">{{SERVERS}}</div>
+      </div>
+    </div>
+  </main>
 </div>
 <script src="/app.js"></script>
 </body></html>
