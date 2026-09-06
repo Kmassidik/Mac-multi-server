@@ -74,8 +74,10 @@ document.querySelectorAll('.eye').forEach(function (b) {
   document.querySelectorAll('form.ajax').forEach(function(f){
     f.addEventListener('submit', function(ev){
       ev.preventDefault();
+      var btn = f.querySelector('button[type=submit]');
+      if (btn && btn.disabled) return;                 // in-flight → block spam clicks
       if (f.dataset.confirm && !confirm(f.dataset.confirm)) return;
-      loadBtn(f.querySelector('button[type=submit]'));
+      loadBtn(btn);
       fetch(f.action, { method:'POST', credentials:'include', redirect:'manual',
         headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
         body:new URLSearchParams(new FormData(f)).toString() }).catch(function(){});
@@ -135,15 +137,47 @@ document.querySelectorAll('.eye').forEach(function (b) {
   }
 })();
 
-// detail page: tab switching (Overview / Monitoring / Access / Danger)
+// detail page: tab switching + live metrics in the Monitoring tab
 (function () {
   var tabs = document.querySelectorAll('.tab'); if (!tabs.length) return;
+  var name = document.body.dataset.vps;
+
+  function bar(label, val){
+    var v = Math.max(0, val || 0), hi = v >= 85 ? ' hi' : '';
+    return '<div class="metric' + hi + '"><div class="ml"><span>' + label + '</span><span>' + v.toFixed(1) + '%</span></div>' +
+           '<div class="track"><div class="fill" style="width:' + Math.min(100, v) + '%"></div></div></div>';
+  }
+  function upfmt(s){ s = Math.floor(s || 0); var d = Math.floor(s/86400), h = Math.floor(s%86400/3600), m = Math.floor(s%3600/60);
+    return d ? d + 'd ' + h + 'h' : (h ? h + 'h ' + m + 'm' : m + 'm'); }
+
+  function loadMetrics(){
+    var st = document.getElementById('monStatus'), body = document.getElementById('monBody');
+    if (!body || !name) return;
+    st.textContent = 'LOADING…'; st.className = 'meta';
+    fetch('/vps/' + encodeURIComponent(name) + '/metrics', { headers:{ 'Accept':'application/json' } })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(d){
+        if (!d){ body.innerHTML = '<p class="hint sub2">Couldn’t load metrics.</p>'; st.textContent=''; return; }
+        if (d.error){
+          var msg = d.error === 'no_agent' ? 'No monitoring agent is reporting for this VPS yet — new VPS auto-install it; for older ones, redeploy or add it from Beszel.'
+                  : d.error === 'not_configured' ? 'Monitoring isn’t configured (set BESZEL_* in .env).'
+                  : 'Monitoring hub is unreachable right now.';
+          body.innerHTML = '<p class="hint sub2">' + msg + '</p>'; st.textContent=''; return;
+        }
+        st.textContent = (d.status || '').toUpperCase(); st.className = 'meta ' + (d.status === 'up' ? 'ok' : 'no');
+        body.innerHTML = bar('CPU', d.cpu) + bar('Memory', d.mem) + bar('Disk', d.disk) +
+          '<p class="hint sub2" style="margin-top:16px">Uptime ' + upfmt(d.up) + ' · live snapshot from Beszel</p>';
+      })
+      .catch(function(){ body.innerHTML = '<p class="hint sub2">Couldn’t load metrics.</p>'; st.textContent=''; });
+  }
+
   tabs.forEach(function (t) {
     t.addEventListener('click', function () {
       tabs.forEach(function (x) { x.classList.remove('active'); });
       t.classList.add('active');
       var n = t.dataset.tab;
       document.querySelectorAll('.tabpanel').forEach(function (p) { p.hidden = (p.dataset.panel !== n); });
+      if (n === 'monitoring') loadMetrics();
     });
   });
 })();

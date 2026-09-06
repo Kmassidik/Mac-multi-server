@@ -165,6 +165,12 @@ func installRoutes(on server: HttpServer, auth: Auth, sessions: Sessions) {
         let items = Store.list().map { "{\"name\":\"\($0.name)\",\"status\":\"\($0.status)\"}" }.joined(separator: ",")
         return jsonOK("[\(items)]")   // names are validated ^[a-zA-Z0-9._-]+$
     }
+    // live metrics for the Monitoring tab (panel proxies the Beszel hub, matched by VM IP)
+    server.GET["/vps/:name/metrics"] = { req in
+        guard authed(req) else { return .raw(401, "Unauthorized", nil) { _ in } }
+        guard let v = Store.get(req.params[":name"] ?? ""), !v.ip.isEmpty else { return .notFound }
+        return jsonOK(Beszel.metricsJSON(ip: v.ip))
+    }
 
     // rename the human "Name" tag
     server.POST["/vps/:name/rename"] = { req in

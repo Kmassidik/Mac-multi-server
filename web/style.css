@@ -216,6 +216,13 @@ body.empty .topology-section{margin-top:56px}
 .dh-sub{font-family:var(--mono);font-size:12px;color:var(--m50);margin-top:6px}
 .dh-actions{display:flex;gap:12px;flex-wrap:wrap}
 
+/* monitoring metric bars */
+.metric{margin:16px 0;font-family:var(--mono)}
+.metric .ml{display:flex;justify-content:space-between;font-size:11px;color:var(--m50);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.metric .track{height:8px;background:var(--gray)}
+.metric .fill{height:8px;background:var(--green);transition:width .3s ease-out}
+.metric.hi .fill{background:var(--warn)}
+
 /* detail tabs */
 .tabs{display:flex;gap:0;border-bottom:1px solid var(--gray);margin-bottom:28px;flex-wrap:wrap}
 .tab{background:none;border:0;border-bottom:2px solid transparent;padding:12px 20px;font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--m50);margin-bottom:-1px;cursor:pointer}
@@ -252,6 +259,11 @@ form.inline input{flex:1;background:transparent;border:0;border-bottom:1px solid
 form.inline input:focus{border-bottom-color:var(--black)}
 .btn.danger{background:transparent;border-color:#e0b4b4;color:#a3282c}
 .btn.danger:hover{background:#a3282c;color:var(--white);border-color:#a3282c}
+/* semantic control buttons: Start (green) / Stop (amber) */
+.btn.line.ctl-ok{border-color:#0a8f45;color:#0a8f45}
+.btn.line.ctl-ok:hover{background:var(--green);color:var(--black);border-color:var(--green)}
+.btn.line.ctl-warn{border-color:#e2b483;color:var(--warn)}
+.btn.line.ctl-warn:hover{background:var(--warn);color:var(--white);border-color:var(--warn)}
 
 .meta.ok{color:#0a8f45} .meta.no{color:#d92d20}
 

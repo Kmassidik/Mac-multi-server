@@ -70,11 +70,11 @@
               </form>
               <form class="ajax" id="cStop" method="post" action="/vps/{{NAME}}/stop" {{STOPHIDE}}>
                 <input type="hidden" name="csrf" value="{{CSRF}}">
-                <button class="btn line" type="submit" data-loading="Stopping…">Stop</button>
+                <button class="btn line ctl-warn" type="submit" data-loading="Stopping…">Stop</button>
               </form>
               <form class="ajax" id="cStart" method="post" action="/vps/{{NAME}}/start" {{STARTHIDE}}>
                 <input type="hidden" name="csrf" value="{{CSRF}}">
-                <button class="btn line" type="submit" data-loading="Starting…">Start</button>
+                <button class="btn line ctl-ok" type="submit" data-loading="Starting…">Start</button>
               </form>
             </div>
             <label class="fld">Name tag</label>
@@ -89,9 +89,9 @@
 
       <section class="tabpanel" data-panel="monitoring" hidden>
         <div class="panel">
-          <div class="sec"><h2>Monitoring</h2></div>
-          <p class="hint sub2">Live CPU / memory / disk / network for this VPS are collected by its Beszel agent and shown in the monitoring hub (its own login).</p>
-          <a class="btn" href="{{MONHREF}}" target="_blank">Open live metrics in Beszel ↗</a>
+          <div class="sec"><h2>Monitoring</h2><span class="meta" id="monStatus"></span></div>
+          <div id="monBody"><p class="hint sub2">Loading current metrics…</p></div>
+          <a class="btn line" href="{{MONHREF}}" target="_blank" style="margin-top:20px">Full graphs in Beszel ↗</a>
         </div>
       </section>
 
