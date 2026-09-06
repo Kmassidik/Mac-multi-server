@@ -32,7 +32,7 @@
           <div class="dh-sub">{{CODE}} · {{BASE}} · bundle: {{BUNDLE}} · id {{NAME}}</div>
         </div>
         <div class="dh-actions">
-          <button class="btn" type="button" onclick="openTerm()">▸ Web terminal</button>
+          {{WEBTERM}}
           <a class="btn line" href="{{MONHREF}}" target="_blank">Metrics ↗</a>
         </div>
       </div>
@@ -44,7 +44,7 @@
             <div><dt>Image</dt><dd>{{BASE}}</dd></div>
             <div><dt>Bundle</dt><dd>{{BUNDLE}}</dd></div>
             <div><dt>Compute</dt><dd>{{CPU}} vCPU</dd></div>
-            <div><dt>Memory</dt><dd>{{MEM}} MB</dd></div>
+            <div><dt>Memory</dt><dd>{{MEM}}</dd></div>
             <div><dt>Storage</dt><dd>{{DISK}} GB</dd></div>
             <div><dt>SSH domain</dt><dd>{{SSHHOST}}</dd></div>
             <div><dt>IP (host-only)</dt><dd>{{IP}}</dd></div>
@@ -68,7 +68,7 @@
 
           <label class="fld">Controls</label>
           <div class="controls">
-            <form method="post" action="/vps/{{NAME}}/restart" onsubmit="return confirm('Restart {{DISPLAY}}? The VM will reboot.')">
+            <form method="post" action="/vps/{{NAME}}/restart" {{RESTHIDE}} onsubmit="return confirm('Restart {{DISPLAY}}? The VM will reboot.')">
               <input type="hidden" name="csrf" value="{{CSRF}}">
               <button class="btn line" type="submit">Restart</button>
             </form>

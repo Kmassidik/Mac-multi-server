@@ -20,6 +20,18 @@ enum Pages {
 
     static func errBlock(_ e: String?) -> String { e.map { "<div class=\"err\">\(esc($0))</div>" } ?? "" }
 
+    /// MB → a human "N GB" (whole when even, one decimal otherwise).
+    static func gb(_ mb: Int) -> String {
+        let g = Double(mb) / 1024.0
+        return g == g.rounded() ? "\(Int(g)) GB" : String(format: "%.1f GB", g)
+    }
+    /// status → tag CSS class: running (green), stopped (muted), else warning (amber).
+    static func statusClass(_ s: String) -> String {
+        if s == "running" { return "run" }
+        if s == "stopped" { return "" }
+        return "warn"   // unhealthy / flapping / restarting
+    }
+
     static func setup(error: String?, csrf: String) -> String {
         tpl("setup.html", ["ERROR": errBlock(error), "CSRF": esc(csrf),
                            "USER": esc(Config.shared.or("PANEL_ADMIN_USER", "admin"))])
@@ -60,14 +72,14 @@ enum Pages {
                 let host = v.hostname.isEmpty ? "" : " · <a href=\"https://\(esc(v.hostname))\" target=\"_blank\" onclick=\"event.stopPropagation()\">\(esc(v.hostname))</a>"
                 let named = (v.label?.isEmpty == false)
                 let idline = named ? "\(esc(v.name)) · " : ""
-                let tag = v.status == "running" ? "tag run" : "tag"
+                let tag = "tag \(statusClass(v.status))"
                 return """
                 <div class="srvcard" onclick="location.href='/vps/\(esc(v.name))'">
                   <div class="top">
                     <div class="nm">\(esc(v.display))</div>
                     <span class="\(tag)">\(esc(v.status))</span>
                   </div>
-                  <div class="sub">\(idline)\(esc(v.bundle))<br>\(v.cpu) vCPU · \(v.mem_mb) MB · \(v.disk_gb) GB<br>\(esc(v.ip))\(host)</div>
+                  <div class="sub">\(idline)\(esc(v.bundle))<br>\(v.cpu) vCPU · \(gb(v.mem_mb)) · \(v.disk_gb) GB<br>\(esc(v.ip))\(host)</div>
                   <div class="acts">
                     <a class="btn line" href="/vps/\(esc(v.name))" onclick="event.stopPropagation()">Manage ↗</a>
                     <form method="post" action="/destroy" onclick="event.stopPropagation()" onsubmit="return confirm('Destroy \(esc(v.display))? This is permanent.')">
@@ -85,6 +97,7 @@ enum Pages {
             "ANNOUNCE": announce, "USER": esc(user), "MONHREF": monHref, "CSRF": esc(csrf),
             "NOTICE": notice.map { "<div class=\"notice\">\(esc($0))</div>" } ?? "",
             "OPTCOUNT": String(bl.count), "COUNT": String(vpsList.count),
+            "RUNNING": String(vpsList.filter { $0.status == "running" }.count),
             "BUNDLES": bundles,
             "CPU": esc(Config.shared.or("VPS_DEFAULT_CPU", "2")),
             "MEM": esc(Config.shared.or("VPS_DEFAULT_MEM_MB", "4096")),
@@ -114,25 +127,34 @@ enum Pages {
         <div class="copybox"><code id="sshcfg">Host *.\(esc(dom))\n  ProxyCommand cloudflared access ssh --hostname %h</code><button class="btn line" type="button" onclick="copyEl('sshcfg', this)">Copy</button></div>
         """
 
+        // web terminal only makes sense on a running VM (ssh to a stopped one just fails).
+        let running = v.status == "running"
+        let webTerm = running
+            ? "<button class=\"btn\" type=\"button\" onclick=\"openTerm()\">▸ Web terminal</button>"
+            : "<button class=\"btn\" type=\"button\" disabled title=\"Start the server to open a terminal\">▸ Web terminal</button>"
+        let stopped = v.status == "stopped"
+
         return tpl("vps.html", [
             "NAME": esc(v.name),
             "DISPLAY": esc(v.display),
             "LABEL": esc(v.label ?? ""),
             "STATUS": esc(v.status),
-            "STATUSCLASS": v.status == "running" ? "run" : "",
+            "STATUSCLASS": statusClass(v.status),
             "BUNDLE": esc(v.bundle),
             "BASE": esc(base),
             "LOGO": logoHTML,
             "CODE": esc(b?.code ?? ""),
-            "CPU": String(v.cpu), "MEM": String(v.mem_mb), "DISK": String(v.disk_gb),
+            "CPU": String(v.cpu), "MEM": gb(v.mem_mb), "DISK": String(v.disk_gb),
             "IP": esc(v.ip),
             "SSHHOST": sshHost.isEmpty ? "<span class=\"muted\">— set Cloudflare keys in .env —</span>" : esc(sshHost),
             "SSH": esc(ssh),
             "SSHSETUP": sshSetup,
             "CREATED": esc(v.created),
-            // manual controls: Stop shows when running, Start when stopped; Restart always.
-            "STOPHIDE":  v.status == "stopped" ? "hidden" : "",
-            "STARTHIDE": v.status == "stopped" ? "" : "hidden",
+            "WEBTERM": webTerm,
+            // manual controls: Start only when stopped; Restart + Stop only when not stopped.
+            "STARTHIDE": stopped ? "" : "hidden",
+            "STOPHIDE":  stopped ? "hidden" : "",
+            "RESTHIDE":  stopped ? "hidden" : "",
             "MONHREF": monHref,
             "CSRF": esc(csrf),
             "NOTICE": notice.map { "<div class=\"notice\">\(esc($0))</div>" } ?? "",
