@@ -52,6 +52,29 @@ cp .env.example .env
 ./mms deploy --bundle openclaw     # first VPS
 ```
 
+## External storage (optional)
+By default VMs live in `~/.tart` on the internal disk. To put them on an external SSD, set one
+line in `.env`:
+
+```
+VPS_STORAGE=/Volumes/YourSSD/tart
+```
+
+`load_env` exports this as `TART_HOME`, so Tart, the per-VPS launchd jobs, and the free-disk guard
+all use the SSD. Do it right:
+
+- **Fast enclosure** — Thunderbolt 4 / USB4 NVMe. VM disk I/O runs through it; a slow USB SSD makes
+  VMs sluggish.
+- **Format APFS** — not exFAT (sparse VM images + Unix permissions need a native filesystem).
+- **Keep it connected** — the VMs *are* the files on it. If it's unplugged, VMs fail to start
+  (launchd's `KeepAlive` keeps retrying until it's mounted again). `install.sh` warns if the path
+  isn't mounted, and a deploy aborts with a clear message rather than falling back to the internal disk.
+- **Only affects new VMs** — VMs already in `~/.tart` stay there. To migrate them: `./mms stop <name>`,
+  move `~/.tart/vms/<name>` (and the `cache/`) onto the SSD under `$VPS_STORAGE`, then `./mms start <name>`.
+
+Note: more storage means **bigger or more VM disks**, not more *running* VMs — that ceiling is RAM
+(see [architecture.md → Failure & recovery](architecture.md#failure--recovery) and the capacity notes).
+
 ## Security notes
 - The platform opens **no inbound port** — cloudflared reaches Cloudflare outbound, and VPS are
   reached by domain SSH (`ssh admin@vpsN.$DOMAIN`) through the tunnel, no jump host. pf stays

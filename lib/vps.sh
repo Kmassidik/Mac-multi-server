@@ -35,11 +35,15 @@ PY
 _vps_run() {
   local name="$1" label plist tart; label="$(_launch_label "$name")"; plist="$(_launch_plist "$name")"
   tart="$(_tart_bin)"
+  # if VMs live on external storage, the launchd job (which doesn't source .env) needs TART_HOME.
+  local envblock=""
+  [ -n "${TART_HOME:-}" ] && envblock="<key>EnvironmentVariables</key><dict><key>TART_HOME</key><string>$TART_HOME</string></dict>"
   cat > "$plist" <<PL
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
   <key>Label</key><string>$label</string>
+  $envblock
   <key>ProgramArguments</key><array>
     <string>$tart</string><string>run</string><string>--no-graphics</string><string>$name</string>
   </array>
@@ -63,14 +67,18 @@ vps_deploy() {
   [[ "$cpu" =~ ^[0-9]+$ && "$mem" =~ ^[0-9]+$ && "$disk" =~ ^[0-9]+$ ]] || die "cpu/mem/disk must be numbers"
   [ "$bundle" = blank ] || [ -d "$TEMPLATES_DIR/$bundle" ] || die "unknown bundle: $bundle"
 
-  # host free-disk guard — VMs are sparse clones, but many can still exhaust the Mac's disk,
-  # which endangers ALL VPS. Refuse to deploy below a floor. (df -g: field 4 = available GB.)
-  local free_gb margin min_free need
-  free_gb="$(df -g / 2>/dev/null | awk 'NR==2{print $4}')"
+  # free-disk guard — check the volume where VMs actually live (TART_HOME on an external SSD,
+  # else the internal ~/.tart). VMs are sparse clones, but many can still exhaust it and
+  # endanger ALL VPS, so refuse below a floor. (df -g: field 4 = available GB.)
+  local vmroot free_gb margin min_free need
+  vmroot="${TART_HOME:-$HOME/.tart}"
+  mkdir -p "$vmroot" 2>/dev/null || true
+  [ -d "$vmroot" ] || die "VM storage not available: $vmroot — is the external SSD (VPS_STORAGE) plugged in and mounted?"
+  free_gb="$(df -g "$vmroot" 2>/dev/null | awk 'NR==2{print $4}')"
   margin="${VPS_DISK_MARGIN_GB:-10}"; min_free="${VPS_MIN_FREE_GB:-20}"
   need="$(( disk + margin ))"; [ "$need" -lt "$min_free" ] && need="$min_free"
   if [[ "$free_gb" =~ ^[0-9]+$ ]] && [ "$free_gb" -lt "$need" ]; then
-    die "not enough host disk: ${free_gb}GB free, need ~${need}GB (disk ${disk}GB + ${margin}GB margin). Free space or lower --disk."
+    die "not enough space on $vmroot: ${free_gb}GB free, need ~${need}GB (disk ${disk}GB + ${margin}GB margin). Free space or lower --disk."
   fi
   [ -f "$VPS_SSH_PUBKEY" ] || die "no ssh pubkey at $VPS_SSH_PUBKEY (set VPS_SSH_PUBKEY in .env)"
   local KEY; KEY="$(cat "$VPS_SSH_PUBKEY")"

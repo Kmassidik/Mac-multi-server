@@ -21,6 +21,8 @@ die()  { printf '%s ✗ %s%s\n' "$(_c 31)" "$*" "$(_r)" >&2; exit 1; }
 load_env() {
   [ -f "$ENV_FILE" ] || die ".env not found — run: cp .env.example .env  then edit it."
   set -a; . "$ENV_FILE"; set +a
+  # optional external storage for VMs: point Tart at a folder on an SSD.
+  [ -n "${VPS_STORAGE:-}" ] && export TART_HOME="$VPS_STORAGE"
   : "${VPS_DEFAULT_CPU:=2}" "${VPS_DEFAULT_MEM_MB:=4096}" "${VPS_DEFAULT_DISK_GB:=40}"
   : "${VPS_BASE_IMAGE:=ghcr.io/cirruslabs/ubuntu:latest}"
   : "${VPS_SUBDOMAIN_PATTERN:=vps{n}}" "${VPS_NET_CIDR:=192.168.64.0/24}"

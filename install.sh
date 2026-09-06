@@ -27,6 +27,15 @@ if [ ! -f "$ENV_FILE" ]; then
 fi
 chmod 600 "$ENV_FILE"; load_env; ok ".env loaded"
 
+# 1b. external VM storage (optional) — TART_HOME is exported by load_env from VPS_STORAGE
+if [ -n "${VPS_STORAGE:-}" ]; then
+  if mkdir -p "$VPS_STORAGE" 2>/dev/null && [ -d "$VPS_STORAGE" ]; then
+    ok "VM storage → $VPS_STORAGE (TART_HOME) — keep this SSD connected"
+  else
+    warn "VPS_STORAGE=$VPS_STORAGE not mounted — plug in the SSD (APFS) before deploying"
+  fi
+fi
+
 # 2. tools
 command -v brew >/dev/null || die "Homebrew required: https://brew.sh"
 log "installing tools (tart, sshpass, cloudflared)…"
