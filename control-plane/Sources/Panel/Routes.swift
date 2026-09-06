@@ -169,7 +169,7 @@ func installRoutes(on server: HttpServer, auth: Auth, sessions: Sessions) {
     server.GET["/vps/:name/metrics"] = { req in
         guard authed(req) else { return .raw(401, "Unauthorized", nil) { _ in } }
         guard let v = Store.get(req.params[":name"] ?? ""), !v.ip.isEmpty else { return .notFound }
-        return jsonOK(Beszel.metricsJSON(ip: v.ip))
+        return jsonOK(Beszel.metricsJSON(ip: v.ip, vps: v.status))
     }
 
     // rename the human "Name" tag

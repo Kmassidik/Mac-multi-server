@@ -27,9 +27,11 @@ enum Beszel {
         return o["token"] as? String
     }
 
-    /// JSON for the Monitoring tab: {ok,status,cpu,mem,disk,up} or {error:…}.
-    static func metricsJSON(ip: String) -> String {
-        func err(_ e: String) -> String { "{\"error\":\"\(e)\"}" }
+    /// JSON for the Monitoring tab: {ok,vps,status,live,cpu,mem,disk,up} or {error:…}.
+    /// `vps` is the panel's own state (authoritative for stopped); `status` is the Beszel agent
+    /// status; `live` is true only when the agent is actually reporting (else numbers are stale).
+    static func metricsJSON(ip: String, vps: String) -> String {
+        func err(_ e: String) -> String { "{\"error\":\"\(e)\",\"vps\":\"\(vps)\"}" }
         guard !Config.shared["BESZEL_ADMIN_EMAIL"].isEmpty else { return err("not_configured") }
         guard let tok = authToken() else { return err("hub_unreachable") }
         var comps = URLComponents(string: "\(hub)/api/collections/systems/records")!
@@ -39,8 +41,10 @@ enum Beszel {
               let items = o["items"] as? [[String: Any]], let sys = items.first else { return err("no_agent") }
         let info = sys["info"] as? [String: Any] ?? [:]
         func n(_ k: String) -> Double { (info[k] as? Double) ?? Double((info[k] as? Int) ?? 0) }
-        // Beszel info fields: cpu=CPU %, mp=memory %, dp=disk %, u=uptime seconds
-        let obj: [String: Any] = ["ok": true, "status": sys["status"] as? String ?? "?",
+        let bstatus = sys["status"] as? String ?? "?"
+        // "live" only when the VPS is running AND the agent is up — otherwise the info is stale.
+        let live = (vps == "running") && (bstatus == "up")
+        let obj: [String: Any] = ["ok": true, "vps": vps, "status": bstatus, "live": live,
                                   "cpu": n("cpu"), "mem": n("mp"), "disk": n("dp"), "up": n("u")]
         return (try? String(data: JSONSerialization.data(withJSONObject: obj), encoding: .utf8)) ?? err("parse")
     }

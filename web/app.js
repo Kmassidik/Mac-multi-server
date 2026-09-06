@@ -164,9 +164,22 @@ document.querySelectorAll('.eye').forEach(function (b) {
                   : 'Monitoring hub is unreachable right now.';
           body.innerHTML = '<p class="hint sub2">' + msg + '</p>'; st.textContent=''; return;
         }
-        st.textContent = (d.status || '').toUpperCase(); st.className = 'meta ' + (d.status === 'up' ? 'ok' : 'no');
-        body.innerHTML = bar('CPU', d.cpu) + bar('Memory', d.mem) + bar('Disk', d.disk) +
-          '<p class="hint sub2" style="margin-top:16px">Uptime ' + upfmt(d.up) + ' · live snapshot from Beszel</p>';
+        // stopped VPS → no live metrics (don't show the stale shutdown snapshot as if live)
+        if (d.vps === 'stopped'){
+          st.textContent = 'STOPPED'; st.className = 'meta no';
+          body.innerHTML = '<p class="hint sub2">This VPS is stopped — start it to see live metrics.</p>';
+          return;
+        }
+        if (d.live){
+          st.textContent = 'UP'; st.className = 'meta ok';
+          body.innerHTML = bar('CPU', d.cpu) + bar('Memory', d.mem) + bar('Disk', d.disk) +
+            '<p class="hint sub2" style="margin-top:16px">Uptime ' + upfmt(d.up) + ' · live from Beszel</p>';
+        } else {
+          // agent not reporting (booting, unhealthy, or just went down) → mark the numbers stale
+          st.textContent = (d.status || 'offline').toUpperCase(); st.className = 'meta no';
+          body.innerHTML = '<p class="hint sub2">Agent isn’t reporting right now — last seen values:</p>' +
+            bar('CPU', d.cpu) + bar('Memory', d.mem) + bar('Disk', d.disk);
+        }
       })
       .catch(function(){ body.innerHTML = '<p class="hint sub2">Couldn’t load metrics.</p>'; st.textContent=''; });
   }
