@@ -92,7 +92,33 @@ enum Pages {
                 """
             }.joined()
 
+        // table view (AWS/GCP-style resource list) — toggled with the card view client-side
+        let serversTable = vpsList.isEmpty
+            ? "<tr><td colspan=\"8\" class=\"empty\">No servers deployed yet — deploy one above.</td></tr>"
+            : vpsList.map { v in
+            let created = String(v.created.prefix(10))
+            return """
+            <tr data-vps="\(esc(v.name))" onclick="location.href='/vps/\(esc(v.name))'">
+              <td class="c-name">\(esc(v.display))</td>
+              <td class="mono muted">\(esc(v.name))</td>
+              <td><span class="tag \(statusClass(v.status))">\(esc(v.status))</span></td>
+              <td class="mono">\(esc(v.bundle))</td>
+              <td class="mono">\(v.cpu)c · \(gb(v.mem_mb)) · \(v.disk_gb)G</td>
+              <td class="mono">\(esc(v.ip))</td>
+              <td class="mono muted">\(esc(created))</td>
+              <td class="row-act">
+                <a class="btn line sm" href="/vps/\(esc(v.name))" onclick="event.stopPropagation()">Manage&nbsp;↗</a>
+                <form method="post" action="/destroy" onclick="event.stopPropagation()" onsubmit="return confirm('Destroy \(esc(v.display))? This is permanent.')">
+                  <input type="hidden" name="csrf" value="\(csrf)"><input type="hidden" name="name" value="\(esc(v.name))">
+                  <button class="btn line sm danger-text" type="submit" data-loading="…">Terminate</button>
+                </form>
+              </td>
+            </tr>
+            """
+        }.joined()
+
         return tpl("dashboard.html", [
+            "SERVERS_TABLE": serversTable,
             "MODE": vpsList.isEmpty ? "empty" : "has",
             "DEPLOYTITLE": vpsList.isEmpty ? "Deploy your first server" : "Deploy a server",
             "ANNOUNCE": announce, "USER": esc(user), "MONHREF": monHref, "CSRF": esc(csrf),

@@ -23,6 +23,7 @@
   <main class="main">
     <div class="mobilebar"><div class="lg"><div class="sq"></div>Platform</div></div>
     <div class="content">
+      <nav class="crumbs"><a href="/dashboard">Home</a> › Instances</nav>
       {{NOTICE}}
 
       <!-- DEPLOY (shown when there are no servers, or when the + button is pressed) -->
@@ -71,9 +72,24 @@
       </section>
 
       <!-- ACTIVE SERVERS (shown when at least one exists) -->
-      <section class="topology-section">
-        <div class="sec"><h2>Active servers</h2><span class="count">{{RUNNING}}/{{COUNT}} running</span></div>
-        <div class="topology">{{SERVERS}}</div>
+      <section class="topology-section" id="serversSection">
+        <div class="sec">
+          <h2>Active servers</h2>
+          <span class="count">{{RUNNING}}/{{COUNT}} running</span>
+          <div class="viewtoggle segmented">
+            <label><input type="radio" name="view" value="table" checked><span>Table</span></label>
+            <label><input type="radio" name="view" value="cards"><span>Cards</span></label>
+          </div>
+        </div>
+        <div class="view-cards"><div class="topology">{{SERVERS}}</div></div>
+        <div class="view-table">
+          <div class="restable-wrap">
+            <table class="restable">
+              <thead><tr><th>Name</th><th>ID</th><th>Status</th><th>Bundle</th><th>Type</th><th>IP</th><th>Created</th><th></th></tr></thead>
+              <tbody>{{SERVERS_TABLE}}</tbody>
+            </table>
+          </div>
+        </div>
       </section>
     </div>
   </main>

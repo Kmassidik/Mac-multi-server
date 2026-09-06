@@ -105,19 +105,45 @@ document.querySelectorAll('.eye').forEach(function (b) {
     }, 3000);
   }
 
-  // dashboard: poll all VPS, update each card's tag + the running count, in place
-  var grid = document.querySelector('.topology');
-  if (grid && !(body && body.classList.contains('detail'))) {
+  // dashboard: poll all VPS, update every card + table row (same data-vps) + count, in place
+  var section = document.getElementById('serversSection');
+  if (section && !(body && body.classList.contains('detail'))) {
     setInterval(function(){
       fetch('/api/vps', { headers:{ 'Accept':'application/json' } })
         .then(function(r){ return r.ok ? r.json() : null; })
         .then(function(list){ if (!list) return; var run = 0;
           list.forEach(function(v){ if (v.status === 'running') run++;
-            var card = grid.querySelector('.srvcard[data-vps="' + v.name + '"]'); if (!card) return;
-            var tg = card.querySelector('.tag'); if (tg){ tg.textContent = v.status; tg.className = 'tag ' + cls(v.status); }
+            document.querySelectorAll('[data-vps="' + v.name + '"]').forEach(function(el){
+              var tg = el.querySelector('.tag'); if (tg){ tg.textContent = v.status; tg.className = 'tag ' + cls(v.status); }
+            });
           });
           var c = document.querySelector('.count'); if (c) c.textContent = run + '/' + list.length + ' running';
         }).catch(function(){});
     }, 4000);
+
+    // card/table view toggle (remembered per browser)
+    var saved = null; try { saved = localStorage.getItem('mms_view'); } catch(e){}
+    function setView(v){
+      section.classList.toggle('as-cards', v === 'cards');
+      var r = section.querySelector('input[name=view][value="' + v + '"]'); if (r) r.checked = true;
+      try { localStorage.setItem('mms_view', v); } catch(e){}
+    }
+    if (saved === 'cards' || saved === 'table') setView(saved);
+    section.querySelectorAll('input[name=view]').forEach(function(r){
+      r.addEventListener('change', function(){ setView(r.value); });
+    });
   }
+})();
+
+// detail page: tab switching (Overview / Monitoring / Access / Danger)
+(function () {
+  var tabs = document.querySelectorAll('.tab'); if (!tabs.length) return;
+  tabs.forEach(function (t) {
+    t.addEventListener('click', function () {
+      tabs.forEach(function (x) { x.classList.remove('active'); });
+      t.classList.add('active');
+      var n = t.dataset.tab;
+      document.querySelectorAll('.tabpanel').forEach(function (p) { p.hidden = (p.dataset.panel !== n); });
+    });
+  });
 })();

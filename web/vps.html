@@ -23,6 +23,7 @@
   <main class="main">
     <div class="mobilebar"><div class="lg"><div class="sq"></div>Platform</div><a class="btn line" href="/dashboard">← Back</a></div>
     <div class="content">
+      <nav class="crumbs"><a href="/dashboard">Home</a> › <a href="/dashboard">Instances</a> › {{DISPLAY}}</nav>
       {{NOTICE}}
 
       <div class="detailhead">
@@ -37,58 +38,82 @@
         </div>
       </div>
 
-      <div class="grid2">
-        <section class="panel">
-          <div class="sec"><h2>Specifications</h2></div>
-          <dl class="kv">
-            <div><dt>Image</dt><dd>{{BASE}}</dd></div>
-            <div><dt>Bundle</dt><dd>{{BUNDLE}}</dd></div>
-            <div><dt>Compute</dt><dd>{{CPU}} vCPU</dd></div>
-            <div><dt>Memory</dt><dd>{{MEM}}</dd></div>
-            <div><dt>Storage</dt><dd>{{DISK}} GB</dd></div>
-            <div><dt>SSH domain</dt><dd>{{SSHHOST}}</dd></div>
-            <div><dt>IP (host-only)</dt><dd>{{IP}}</dd></div>
-            <div><dt>Created</dt><dd>{{CREATED}}</dd></div>
-          </dl>
-        </section>
+      <div class="tabs">
+        <button class="tab active" type="button" data-tab="overview">Overview</button>
+        <button class="tab" type="button" data-tab="monitoring">Monitoring</button>
+        <button class="tab" type="button" data-tab="access">Access</button>
+        <button class="tab" type="button" data-tab="danger">Danger</button>
+      </div>
 
-        <section class="panel">
-          <div class="sec"><h2>Access &amp; management</h2></div>
-
-          <label class="fld">SSH — by domain, no IP</label>
-          <div class="copybox"><code id="sshcmd">{{SSH}}</code><button class="btn line" type="button" onclick="copyEl('sshcmd', this)">Copy</button></div>
-          {{SSHSETUP}}
-
-          <label class="fld">Name tag</label>
-          <form method="post" action="/vps/{{NAME}}/rename" class="inline">
-            <input type="hidden" name="csrf" value="{{CSRF}}">
-            <input type="text" name="label" value="{{LABEL}}" maxlength="60" placeholder="Name this server" autocomplete="off">
-            <button class="btn line" type="submit" data-loading="Saving…">Save</button>
-          </form>
-
-          <label class="fld">Controls</label>
-          <div class="controls">
-            <form class="ajax" id="cRestart" method="post" action="/vps/{{NAME}}/restart" {{RESTHIDE}} data-confirm="Restart {{DISPLAY}}? The VM will reboot.">
+      <section class="tabpanel" data-panel="overview">
+        <div class="grid2">
+          <div class="panel">
+            <div class="sec"><h2>Specifications</h2></div>
+            <dl class="kv">
+              <div><dt>Image</dt><dd>{{BASE}}</dd></div>
+              <div><dt>Bundle</dt><dd>{{BUNDLE}}</dd></div>
+              <div><dt>Compute</dt><dd>{{CPU}} vCPU</dd></div>
+              <div><dt>Memory</dt><dd>{{MEM}}</dd></div>
+              <div><dt>Storage</dt><dd>{{DISK}} GB</dd></div>
+              <div><dt>SSH domain</dt><dd>{{SSHHOST}}</dd></div>
+              <div><dt>IP (host-only)</dt><dd>{{IP}}</dd></div>
+              <div><dt>Created</dt><dd>{{CREATED}}</dd></div>
+            </dl>
+          </div>
+          <div class="panel">
+            <div class="sec"><h2>Power</h2></div>
+            <label class="fld">Controls</label>
+            <div class="controls">
+              <form class="ajax" id="cRestart" method="post" action="/vps/{{NAME}}/restart" {{RESTHIDE}} data-confirm="Restart {{DISPLAY}}? The VM will reboot.">
+                <input type="hidden" name="csrf" value="{{CSRF}}">
+                <button class="btn line" type="submit" data-loading="Restarting…">Restart</button>
+              </form>
+              <form class="ajax" id="cStop" method="post" action="/vps/{{NAME}}/stop" {{STOPHIDE}}>
+                <input type="hidden" name="csrf" value="{{CSRF}}">
+                <button class="btn line" type="submit" data-loading="Stopping…">Stop</button>
+              </form>
+              <form class="ajax" id="cStart" method="post" action="/vps/{{NAME}}/start" {{STARTHIDE}}>
+                <input type="hidden" name="csrf" value="{{CSRF}}">
+                <button class="btn line" type="submit" data-loading="Starting…">Start</button>
+              </form>
+            </div>
+            <label class="fld">Name tag</label>
+            <form method="post" action="/vps/{{NAME}}/rename" class="inline">
               <input type="hidden" name="csrf" value="{{CSRF}}">
-              <button class="btn line" type="submit" data-loading="Restarting…">Restart</button>
-            </form>
-            <form class="ajax" id="cStop" method="post" action="/vps/{{NAME}}/stop" {{STOPHIDE}}>
-              <input type="hidden" name="csrf" value="{{CSRF}}">
-              <button class="btn line" type="submit" data-loading="Stopping…">Stop</button>
-            </form>
-            <form class="ajax" id="cStart" method="post" action="/vps/{{NAME}}/start" {{STARTHIDE}}>
-              <input type="hidden" name="csrf" value="{{CSRF}}">
-              <button class="btn line" type="submit" data-loading="Starting…">Start</button>
+              <input type="text" name="label" value="{{LABEL}}" maxlength="60" placeholder="Name this server" autocomplete="off">
+              <button class="btn line" type="submit" data-loading="Saving…">Save</button>
             </form>
           </div>
+        </div>
+      </section>
 
-          <label class="fld danger-label">Danger zone</label>
+      <section class="tabpanel" data-panel="monitoring" hidden>
+        <div class="panel">
+          <div class="sec"><h2>Monitoring</h2></div>
+          <p class="hint sub2">Live CPU / memory / disk / network for this VPS are collected by its Beszel agent and shown in the monitoring hub (its own login).</p>
+          <a class="btn" href="{{MONHREF}}" target="_blank">Open live metrics in Beszel ↗</a>
+        </div>
+      </section>
+
+      <section class="tabpanel" data-panel="access" hidden>
+        <div class="panel">
+          <div class="sec"><h2>Access — SSH by domain, no IP</h2></div>
+          <label class="fld">Connect</label>
+          <div class="copybox"><code id="sshcmd">{{SSH}}</code><button class="btn line" type="button" onclick="copyEl('sshcmd', this)">Copy</button></div>
+          {{SSHSETUP}}
+        </div>
+      </section>
+
+      <section class="tabpanel" data-panel="danger" hidden>
+        <div class="panel">
+          <div class="sec"><h2>Danger zone</h2></div>
+          <p class="hint sub2">Terminating destroys the VM and its disk permanently — this can't be undone.</p>
           <form method="post" action="/destroy" onsubmit="return confirm('Destroy {{DISPLAY}}? This is permanent.')">
             <input type="hidden" name="csrf" value="{{CSRF}}"><input type="hidden" name="name" value="{{NAME}}">
             <button class="btn danger" type="submit" data-loading="Terminating…">Terminate instance</button>
           </form>
-        </section>
-      </div>
+        </div>
+      </section>
 
     </div>
   </main>
