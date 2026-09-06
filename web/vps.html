@@ -185,6 +185,10 @@ function closeTerm(){
   if (term) term.clear();
 }
 
+// bind the terminal button with a listener (not inline onclick) so it works after the poller
+// enables it on starting→running, without a refresh. `disabled` alone blocks clicks while booting.
+(function(){ var b = $('termBtn'); if (b) b.addEventListener('click', openTerm); })();
+
 addEventListener('keydown', e => { if (e.key==='Escape' && modalOpen()) closeTerm(); });
 addEventListener('resize',  () => { if (term && modalOpen()) { try{fit.fit();}catch(e){} sendResize(); } });
 </script>

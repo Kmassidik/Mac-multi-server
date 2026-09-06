@@ -156,9 +156,9 @@ enum Pages {
 
         // web terminal only makes sense on a running VM (ssh to a stopped one just fails).
         let running = v.status == "running"
-        let webTerm = running
-            ? "<button class=\"btn\" id=\"termBtn\" type=\"button\" onclick=\"openTerm()\">▸ Web terminal</button>"
-            : "<button class=\"btn\" id=\"termBtn\" type=\"button\" disabled title=\"Start the server to open a terminal\">▸ Web terminal</button>"
+        // no inline onclick — app/inline JS binds a click listener so it works after the poller
+        // enables the button on starting→running (disabled just blocks clicks while booting).
+        let webTerm = "<button class=\"btn\" id=\"termBtn\" type=\"button\"\(running ? "" : " disabled title=\"Start the server first\"")>▸ Web terminal</button>"
         let stopped = v.status == "stopped"
 
         return tpl("vps.html", [
