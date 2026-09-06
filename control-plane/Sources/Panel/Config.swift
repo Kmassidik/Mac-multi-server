@@ -4,6 +4,10 @@ import Foundation
 let ROOT = FileManager.default.currentDirectoryPath
 func rootURL(_ p: String) -> URL { URL(fileURLWithPath: ROOT).appendingPathComponent(p) }
 
+/// Cache-busting token for static assets — new value each process start (i.e. each deploy),
+/// so ?v=ASSET_VER forces browsers/Cloudflare to fetch the fresh style.css / app.js.
+let ASSET_VER = String(Int(Date().timeIntervalSince1970))
+
 /// Minimal `.env` reader (display defaults: admin user, ssh jump, domain…).
 struct Config {
     static let shared = Config()

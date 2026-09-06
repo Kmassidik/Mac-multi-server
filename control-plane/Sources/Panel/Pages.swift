@@ -14,6 +14,7 @@ enum Pages {
     static func tpl(_ name: String, _ vars: [String: String]) -> String {
         var s = (try? String(contentsOf: rootURL("web/\(name)"), encoding: .utf8))
             ?? "<h1>template missing: \(name)</h1>"
+        var vars = vars; vars["VER"] = ASSET_VER   // every page gets the cache-bust token
         for (k, v) in vars { s = s.replacingOccurrences(of: "{{\(k)}}", with: v) }
         return s.replacingOccurrences(of: "\\{\\{[A-Z_]+\\}\\}", with: "", options: .regularExpression)
     }
