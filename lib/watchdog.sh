@@ -69,8 +69,12 @@ watchdog_tick(){
     name="$(basename "$f" .json)"
     status="$(_wd_status "$f")"
 
-    # never touch a VPS the operator deliberately Stopped.
-    if [ "$status" = "stopped" ]; then wd_log "$name skip (stopped)"; continue; fi
+    # skip a deliberately-stopped VPS, and transitional states (start/restart handle their own
+    # readiness wait — probing a booting VM would wrongly count failures toward a restart).
+    case "$status" in
+      stopped)               wd_log "$name skip (stopped)"; continue ;;
+      starting|restarting)   wd_log "$name skip ($status)"; continue ;;
+    esac
 
     fails="$(_health_get "$name" fails 0)"
     restarts="$(_health_get "$name" restarts 0)"

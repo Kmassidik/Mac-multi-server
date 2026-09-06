@@ -158,17 +158,36 @@ vps_destroy() {
 # These drive the per-VPS LaunchAgent (io.macmultiserver.<name>) in the gui/$(id -u)
 # domain, so launchctl works without sudo. tart is resolved with an absolute-path fallback.
 
+# is the guest actually reachable over SSH? (0 = yes) — the real "is it up" signal
+_vps_ssh_ready(){
+  local name="$1" tart ip; tart="$(_tart_bin)"
+  ip="$("$tart" ip "$name" 2>/dev/null || true)"; [ -n "$ip" ] || return 1
+  ssh -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o ConnectTimeout=5 \
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "admin@$ip" true >/dev/null 2>&1
+}
+# wait for the VM to finish booting, then mark it truly "running" (else "unhealthy").
+# Runs inside the (backgrounded) mms process, so the panel returns immediately and the
+# status flips starting/restarting → running only once SSH actually answers.
+_vps_await_ready(){
+  local name="$1"
+  for _ in $(seq 1 40); do
+    if _vps_ssh_ready "$name"; then _vps_set_status "$name" "running"; ok "$name is ready"; return 0; fi
+    sleep 3
+  done
+  _vps_set_status "$name" "unhealthy"; warn "$name did not become reachable"; return 1
+}
+
 # vps_restart <name> — graceful tart stop, then kickstart the LaunchAgent (SIGKILL+relaunch
 # of `tart run`). KeepAlive stays intact for the normal case.
 vps_restart(){
   local name="$1"; valid_name "$name"
   local label tart; label="$(_launch_label "$name")"; tart="$(_tart_bin)"
   log "restarting ${name}…"
+  _vps_set_status "$name" "restarting"
   [ -n "$tart" ] && "$tart" stop "$name" >/dev/null 2>&1 || true
   launchctl kickstart -k "gui/$(id -u)/$label" 2>/dev/null \
     || warn "kickstart failed for $label (agent not bootstrapped?)"
-  _vps_set_status "$name" "running"
-  ok "$name restarted"
+  _vps_await_ready "$name"   # flips to running once SSH answers (VM finished booting)
 }
 
 # vps_stop <name> — bootout the LaunchAgent (so KeepAlive won't relaunch) then stop the VM.
@@ -188,6 +207,7 @@ vps_start(){
   local name="$1"; valid_name "$name"
   local label plist; label="$(_launch_label "$name")"; plist="$(_launch_plist "$name")"
   log "starting ${name}…"
+  _vps_set_status "$name" "starting"
   if [ -f "$plist" ]; then
     launchctl bootstrap "gui/$(id -u)" "$plist" 2>/dev/null \
       || launchctl kickstart -k "gui/$(id -u)/$label" 2>/dev/null \
@@ -195,8 +215,7 @@ vps_start(){
   else
     warn "no plist for $name — recreating"; _vps_run "$name"
   fi
-  _vps_set_status "$name" "running"
-  ok "$name started"
+  _vps_await_ready "$name"   # flips to running once SSH answers (VM finished booting)
 }
 
 # vps_list — one line per VPS
