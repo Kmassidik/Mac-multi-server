@@ -56,3 +56,68 @@ document.querySelectorAll('.eye').forEach(function (b) {
   }
   p.addEventListener('input', chk); c.addEventListener('input', chk); chk();
 })();
+
+// action buttons: loading state; AJAX for lifecycle controls; live status polling.
+(function () {
+  function cls(s){ return s === 'running' ? 'run' : (s === 'stopped' ? '' : 'warn'); }
+  function loadBtn(b){ if(!b) return; if(b.dataset.orig == null) b.dataset.orig = b.textContent;
+    if(b.dataset.loading) b.textContent = b.dataset.loading; b.disabled = true; b.classList.add('loading'); }
+  function resetBtns(){ document.querySelectorAll('button[data-orig]').forEach(function(b){
+    b.textContent = b.dataset.orig; b.disabled = false; b.classList.remove('loading'); }); }
+
+  // any non-AJAX form: show loading on its submit button before it navigates
+  document.querySelectorAll('form:not(.ajax)').forEach(function(f){
+    f.addEventListener('submit', function(){ loadBtn(f.querySelector('button[type=submit]')); });
+  });
+
+  // AJAX lifecycle controls (stop/start/restart): fire without navigating; poller reflects result
+  document.querySelectorAll('form.ajax').forEach(function(f){
+    f.addEventListener('submit', function(ev){
+      ev.preventDefault();
+      if (f.dataset.confirm && !confirm(f.dataset.confirm)) return;
+      loadBtn(f.querySelector('button[type=submit]'));
+      fetch(f.action, { method:'POST', credentials:'include', redirect:'manual',
+        headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
+        body:new URLSearchParams(new FormData(f)).toString() }).catch(function(){});
+      setTimeout(resetBtns, 45000);   // safety: don't get stuck if state never changes
+    });
+  });
+
+  var body = document.body, name = body && body.dataset.vps;
+
+  // detail page: poll this VPS, update the status tag + which controls show, in place
+  if (name && body.classList.contains('detail')) {
+    var tag = document.getElementById('stTag');
+    var cur = tag ? tag.textContent.trim() : '';
+    function applyDetail(s){
+      resetBtns();
+      if (tag){ tag.textContent = s; tag.className = 'tag ' + cls(s); }
+      var stopped = s === 'stopped', running = s === 'running';
+      var st = document.getElementById('cStart'), sp = document.getElementById('cStop'), rs = document.getElementById('cRestart');
+      if (st) st.hidden = !stopped; if (sp) sp.hidden = stopped; if (rs) rs.hidden = stopped;
+      var t = document.getElementById('termBtn'); if (t) t.disabled = !running;
+    }
+    setInterval(function(){
+      fetch('/vps/' + encodeURIComponent(name) + '/status', { headers:{ 'Accept':'application/json' } })
+        .then(function(r){ return r.ok ? r.json() : null; })
+        .then(function(d){ if (d && d.status && d.status !== cur){ cur = d.status; applyDetail(d.status); } })
+        .catch(function(){});
+    }, 3000);
+  }
+
+  // dashboard: poll all VPS, update each card's tag + the running count, in place
+  var grid = document.querySelector('.topology');
+  if (grid && !(body && body.classList.contains('detail'))) {
+    setInterval(function(){
+      fetch('/api/vps', { headers:{ 'Accept':'application/json' } })
+        .then(function(r){ return r.ok ? r.json() : null; })
+        .then(function(list){ if (!list) return; var run = 0;
+          list.forEach(function(v){ if (v.status === 'running') run++;
+            var card = grid.querySelector('.srvcard[data-vps="' + v.name + '"]'); if (!card) return;
+            var tg = card.querySelector('.tag'); if (tg){ tg.textContent = v.status; tg.className = 'tag ' + cls(v.status); }
+          });
+          var c = document.querySelector('.count'); if (c) c.textContent = run + '/' + list.length + ' running';
+        }).catch(function(){});
+    }, 4000);
+  }
+})();

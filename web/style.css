@@ -133,6 +133,7 @@ input.txt:hover,input.txt:focus{border-bottom-color:var(--black)}
 .srvcard .tag.warn{color:var(--warn)} .srvcard .tag.warn::before{content:"● ";color:var(--warn)}
 body.empty .topology-section{margin-top:56px}
 .btn[disabled]{opacity:.4;cursor:not-allowed;pointer-events:none}
+.btn.loading{opacity:.85;cursor:progress;pointer-events:none}
 .srvcard .sub{font-family:var(--mono);font-size:11px;color:var(--m50);line-height:1.7;overflow-wrap:anywhere}
 .srvcard .sub a{color:var(--black);text-decoration:underline}
 .srvcard .acts{display:flex;gap:12px;margin-top:auto;padding-top:4px;flex-wrap:wrap}

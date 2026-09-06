@@ -74,7 +74,7 @@ enum Pages {
                 let idline = named ? "\(esc(v.name)) · " : ""
                 let tag = "tag \(statusClass(v.status))"
                 return """
-                <div class="srvcard" onclick="location.href='/vps/\(esc(v.name))'">
+                <div class="srvcard" data-vps="\(esc(v.name))" onclick="location.href='/vps/\(esc(v.name))'">
                   <div class="top">
                     <div class="nm">\(esc(v.display))</div>
                     <span class="\(tag)">\(esc(v.status))</span>
@@ -84,7 +84,7 @@ enum Pages {
                     <a class="btn line" href="/vps/\(esc(v.name))" onclick="event.stopPropagation()">Manage ↗</a>
                     <form method="post" action="/destroy" onclick="event.stopPropagation()" onsubmit="return confirm('Destroy \(esc(v.display))? This is permanent.')">
                       <input type="hidden" name="csrf" value="\(csrf)"><input type="hidden" name="name" value="\(esc(v.name))">
-                      <button class="btn line" type="submit">Terminate</button>
+                      <button class="btn line" type="submit" data-loading="Terminating…">Terminate</button>
                     </form>
                   </div>
                 </div>
@@ -130,8 +130,8 @@ enum Pages {
         // web terminal only makes sense on a running VM (ssh to a stopped one just fails).
         let running = v.status == "running"
         let webTerm = running
-            ? "<button class=\"btn\" type=\"button\" onclick=\"openTerm()\">▸ Web terminal</button>"
-            : "<button class=\"btn\" type=\"button\" disabled title=\"Start the server to open a terminal\">▸ Web terminal</button>"
+            ? "<button class=\"btn\" id=\"termBtn\" type=\"button\" onclick=\"openTerm()\">▸ Web terminal</button>"
+            : "<button class=\"btn\" id=\"termBtn\" type=\"button\" disabled title=\"Start the server to open a terminal\">▸ Web terminal</button>"
         let stopped = v.status == "stopped"
 
         return tpl("vps.html", [

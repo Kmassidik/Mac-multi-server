@@ -6,7 +6,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/style.css">
 <link rel="stylesheet" href="/vendor/xterm.min.css">
-</head><body class="detail">
+</head><body class="detail" data-vps="{{NAME}}">
 <div class="announce">MAC-MULTI-SERVER · INSTANCE {{NAME}}</div>
 <div class="shell">
   <aside class="side">
@@ -28,7 +28,7 @@
       <div class="detailhead">
         <div class="dh-logo">{{LOGO}}</div>
         <div class="dh-main">
-          <div class="dh-title">{{DISPLAY}} <span class="tag {{STATUSCLASS}}">{{STATUS}}</span></div>
+          <div class="dh-title">{{DISPLAY}} <span class="tag {{STATUSCLASS}}" id="stTag">{{STATUS}}</span></div>
           <div class="dh-sub">{{CODE}} · {{BASE}} · bundle: {{BUNDLE}} · id {{NAME}}</div>
         </div>
         <div class="dh-actions">
@@ -63,29 +63,29 @@
           <form method="post" action="/vps/{{NAME}}/rename" class="inline">
             <input type="hidden" name="csrf" value="{{CSRF}}">
             <input type="text" name="label" value="{{LABEL}}" maxlength="60" placeholder="Name this server" autocomplete="off">
-            <button class="btn line" type="submit">Save</button>
+            <button class="btn line" type="submit" data-loading="Saving…">Save</button>
           </form>
 
           <label class="fld">Controls</label>
           <div class="controls">
-            <form method="post" action="/vps/{{NAME}}/restart" {{RESTHIDE}} onsubmit="return confirm('Restart {{DISPLAY}}? The VM will reboot.')">
+            <form class="ajax" id="cRestart" method="post" action="/vps/{{NAME}}/restart" {{RESTHIDE}} data-confirm="Restart {{DISPLAY}}? The VM will reboot.">
               <input type="hidden" name="csrf" value="{{CSRF}}">
-              <button class="btn line" type="submit">Restart</button>
+              <button class="btn line" type="submit" data-loading="Restarting…">Restart</button>
             </form>
-            <form method="post" action="/vps/{{NAME}}/stop" {{STOPHIDE}}>
+            <form class="ajax" id="cStop" method="post" action="/vps/{{NAME}}/stop" {{STOPHIDE}}>
               <input type="hidden" name="csrf" value="{{CSRF}}">
-              <button class="btn line" type="submit">Stop</button>
+              <button class="btn line" type="submit" data-loading="Stopping…">Stop</button>
             </form>
-            <form method="post" action="/vps/{{NAME}}/start" {{STARTHIDE}}>
+            <form class="ajax" id="cStart" method="post" action="/vps/{{NAME}}/start" {{STARTHIDE}}>
               <input type="hidden" name="csrf" value="{{CSRF}}">
-              <button class="btn line" type="submit">Start</button>
+              <button class="btn line" type="submit" data-loading="Starting…">Start</button>
             </form>
           </div>
 
           <label class="fld danger-label">Danger zone</label>
           <form method="post" action="/destroy" onsubmit="return confirm('Destroy {{DISPLAY}}? This is permanent.')">
             <input type="hidden" name="csrf" value="{{CSRF}}"><input type="hidden" name="name" value="{{NAME}}">
-            <button class="btn danger" type="submit">Terminate instance</button>
+            <button class="btn danger" type="submit" data-loading="Terminating…">Terminate instance</button>
           </form>
         </section>
       </div>

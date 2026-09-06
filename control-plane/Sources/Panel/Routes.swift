@@ -151,6 +151,21 @@ func installRoutes(on server: HttpServer, auth: Auth, sessions: Sessions) {
         let notice = (req.queryParams.first(where: { $0.0 == "notice" })?.1).flatMap { $0.removingPercentEncoding ?? $0 }
         return html(Pages.vpsDetail(vps: v, csrf: token(req) ?? "", notice: notice))
     }
+    // live status (JSON) — polled by the UI so stop/start/restart reflect without a refresh
+    func jsonOK(_ s: String) -> HttpResponse {
+        .raw(200, "OK", ["Content-Type": "application/json", "Cache-Control": "no-store"]) { try $0.write([UInt8](s.utf8)) }
+    }
+    server.GET["/vps/:name/status"] = { req in
+        guard authed(req) else { return .raw(401, "Unauthorized", nil) { _ in } }
+        guard let v = Store.get(req.params[":name"] ?? "") else { return .notFound }
+        return jsonOK("{\"status\":\"\(v.status)\"}")   // status is a controlled vocab — safe
+    }
+    server.GET["/api/vps"] = { req in
+        guard authed(req) else { return .raw(401, "Unauthorized", nil) { _ in } }
+        let items = Store.list().map { "{\"name\":\"\($0.name)\",\"status\":\"\($0.status)\"}" }.joined(separator: ",")
+        return jsonOK("[\(items)]")   // names are validated ^[a-zA-Z0-9._-]+$
+    }
+
     // rename the human "Name" tag
     server.POST["/vps/:name/rename"] = { req in
         guard authed(req), csrfOK(req) else { return redirect("/") }

@@ -143,7 +143,7 @@ JSON
 vps_destroy() {
   local name="$1"; valid_name "$name"; need_tool tart
   local label; label="$(_launch_label "$name")"
-  log "destroying $name…"
+  log "destroying ${name}…"
   launchctl bootout "gui/$(id -u)/$label" 2>/dev/null || true
   pkill -f "tart run --no-graphics $name" 2>/dev/null || true
   rm -f "$(_launch_plist "$name")"
@@ -163,7 +163,7 @@ vps_destroy() {
 vps_restart(){
   local name="$1"; valid_name "$name"
   local label tart; label="$(_launch_label "$name")"; tart="$(_tart_bin)"
-  log "restarting $name…"
+  log "restarting ${name}…"
   [ -n "$tart" ] && "$tart" stop "$name" >/dev/null 2>&1 || true
   launchctl kickstart -k "gui/$(id -u)/$label" 2>/dev/null \
     || warn "kickstart failed for $label (agent not bootstrapped?)"
@@ -176,7 +176,7 @@ vps_restart(){
 vps_stop(){
   local name="$1"; valid_name "$name"
   local label tart; label="$(_launch_label "$name")"; tart="$(_tart_bin)"
-  log "stopping $name…"
+  log "stopping ${name}…"
   launchctl bootout "gui/$(id -u)/$label" 2>/dev/null || true
   [ -n "$tart" ] && "$tart" stop "$name" >/dev/null 2>&1 || true
   _vps_set_status "$name" "stopped"
@@ -187,7 +187,7 @@ vps_stop(){
 vps_start(){
   local name="$1"; valid_name "$name"
   local label plist; label="$(_launch_label "$name")"; plist="$(_launch_plist "$name")"
-  log "starting $name…"
+  log "starting ${name}…"
   if [ -f "$plist" ]; then
     launchctl bootstrap "gui/$(id -u)" "$plist" 2>/dev/null \
       || launchctl kickstart -k "gui/$(id -u)/$label" 2>/dev/null \
