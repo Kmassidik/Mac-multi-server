@@ -27,22 +27,46 @@
 
       <!-- DEPLOY (shown when there are no servers, or when the + button is pressed) -->
       <section class="deploy-section">
-        <form method="post" action="/deploy">
+        <form method="post" action="/deploy" id="deployForm">
           <input type="hidden" name="csrf" value="{{CSRF}}">
           <div class="sec">
             <h2>{{DEPLOYTITLE}}</h2>
-            <span class="meta">{{OPTCOUNT}} IMAGES AVAILABLE</span>
+            <span class="meta">pick an image</span>
             <button type="button" class="closebtn" onclick="closeDeploy()">✕ Close</button>
           </div>
-          <p class="hint">Choose an image — each is a real <strong>Ubuntu 24.04 LTS</strong> VPS, optionally with an agent pre-installed. Then set a name and size.</p>
+          <p class="hint">Each is a real <strong>Ubuntu 24.04 LTS</strong> VPS, optionally with an agent pre-installed. Choose one, size it, name it.</p>
           <div class="envgrid">{{BUNDLES}}</div>
-          <div class="provision">
-            <div class="wide"><label>Name <span class="opt">(optional)</span></label><input type="text" name="label" maxlength="60" placeholder="e.g. my-email-bot" autocomplete="off"></div>
-            <div><label>Compute (vCPU)</label><input type="number" name="cpu" value="{{CPU}}" min="1" max="16"></div>
-            <div><label>Memory (MB)</label><input type="number" name="mem" value="{{MEM}}" step="1024" min="512"></div>
-            <div><label>Storage (GB)</label><input type="number" name="disk" value="{{DISK}}" step="10" min="10"></div>
+
+          <div class="field">
+            <label class="fieldlbl">Size</label>
+            <div class="segmented">
+              <label><input type="radio" name="size" value="s"><span>S</span></label>
+              <label><input type="radio" name="size" value="m" checked><span>M</span></label>
+              <label><input type="radio" name="size" value="l"><span>L</span></label>
+              <label><input type="radio" name="size" value="custom"><span>Custom</span></label>
+            </div>
           </div>
-          <div class="deploy"><button class="btn" type="submit">Execute deployment</button></div>
+
+          <div class="custom" id="customBox" hidden>
+            <div><label>vCPU</label><input type="number" id="cCpu" min="1" max="16" value="{{CPU}}"></div>
+            <div><label>RAM (GB)</label><input type="number" id="cRam" min="1" max="128" value="4"></div>
+            <div><label>Disk (GB)</label><input type="number" id="cDisk" min="10" max="500" step="10" value="{{DISK}}"></div>
+          </div>
+
+          <div class="field">
+            <label class="fieldlbl">Name <span class="opt">optional</span></label>
+            <input class="txt" type="text" name="label" maxlength="60" placeholder="e.g. my-email-bot" autocomplete="off">
+          </div>
+
+          <!-- actual values submitted; JS keeps them in sync, defaults = M so it works without JS -->
+          <input type="hidden" name="cpu"  id="fCpu"  value="{{CPU}}">
+          <input type="hidden" name="mem"  id="fMem"  value="{{MEM}}">
+          <input type="hidden" name="disk" id="fDisk" value="{{DISK}}">
+
+          <div class="deploy">
+            <span class="summary" id="deploySummary"></span>
+            <button class="btn" type="submit">Deploy</button>
+          </div>
         </form>
       </section>
 

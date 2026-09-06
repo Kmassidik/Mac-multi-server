@@ -105,7 +105,7 @@ func installRoutes(on server: HttpServer, auth: Auth, sessions: Sessions) {
 
     func dashPage(_ req: HttpRequest) -> HttpResponse {
         guard auth.isConfigured, authed(req) else { return redirect("/") }   // protected → bounce to login
-        let notice = req.queryParams.first(where: { $0.0 == "notice" })?.1
+        let notice = (req.queryParams.first(where: { $0.0 == "notice" })?.1).flatMap { $0.removingPercentEncoding ?? $0 }
         return html(Pages.dashboard(user: auth.username() ?? "admin",
                                     vpsList: Store.list(), csrf: token(req) ?? "", notice: notice))
     }
@@ -148,7 +148,7 @@ func installRoutes(on server: HttpServer, auth: Auth, sessions: Sessions) {
     server.GET["/vps/:name"] = { req in
         guard auth.isConfigured, authed(req) else { return redirect("/") }
         guard let v = Store.get(req.params[":name"] ?? "") else { return redirect("/dashboard?notice=No%20such%20VPS") }
-        let notice = req.queryParams.first(where: { $0.0 == "notice" })?.1
+        let notice = (req.queryParams.first(where: { $0.0 == "notice" })?.1).flatMap { $0.removingPercentEncoding ?? $0 }
         return html(Pages.vpsDetail(vps: v, csrf: token(req) ?? "", notice: notice))
     }
     // rename the human "Name" tag

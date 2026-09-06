@@ -73,12 +73,12 @@ body.show-deploy .fab{display:none}
 .envcard .logo img{width:24px;height:24px;object-fit:contain}
 
 /* environment grid */
-.envgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1px;background:var(--gray);border:1px solid var(--gray)}
+.envgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
 .envgrid label{cursor:pointer;background:var(--white);display:block}
 .envgrid input{display:none}
-.envcard{height:100%;padding:24px;border:2px solid transparent;position:relative}
-.envcard:hover{border-color:var(--gray)}
-.envgrid input:checked + .envcard{border-color:var(--green)}
+.envcard{height:100%;padding:24px;border:1px solid var(--gray);position:relative;transition:border-color .15s ease-out}
+.envcard:hover{border-color:var(--black)}
+.envgrid input:checked + .envcard{border-color:var(--green);box-shadow:inset 0 0 0 1px var(--green)}
 .envcard .badge{position:absolute;top:16px;right:16px;width:8px;height:8px;background:var(--green);opacity:0}
 .envgrid input:checked + .envcard .badge{opacity:1}
 .envcard .code{font-family:var(--mono);font-size:12px;color:var(--m40);text-transform:uppercase;display:block;margin-bottom:16px}
@@ -91,6 +91,27 @@ body.show-deploy .fab{display:none}
 .provision input{width:100%;font-size:26px;background:transparent;border:0;border-bottom:1px solid var(--gray);padding:0 0 8px;color:var(--black);font-family:var(--mono)}
 .provision input:hover{border-bottom-color:var(--black)}
 .provision input:focus{border-bottom-color:var(--black)}
+
+/* deploy form controls — size presets (S/M/L/Custom), custom inputs, name */
+.field{display:flex;align-items:center;gap:20px;margin-top:26px;flex-wrap:wrap}
+.fieldlbl{font-family:var(--mono);font-size:11px;color:var(--m50);text-transform:uppercase;letter-spacing:.18em;flex:0 0 auto;min-width:56px}
+.fieldlbl .opt{color:var(--m40);text-transform:none;letter-spacing:0;font-size:10px}
+.segmented{display:inline-flex;border:1px solid var(--gray)}
+.segmented label{margin:0;cursor:pointer}
+.segmented input{position:absolute;opacity:0;pointer-events:none}
+.segmented span{display:block;padding:9px 22px;font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.06em;border-right:1px solid var(--gray);color:var(--m60);transition:color .12s}
+.segmented label:last-child span{border-right:0}
+.segmented label:hover span{color:var(--black)}
+.segmented input:checked + span{background:var(--green);color:var(--black)}
+.segmented input:focus-visible + span{outline:2px solid var(--black);outline-offset:-2px}
+.custom{display:grid;grid-template-columns:repeat(3,minmax(90px,150px));gap:28px;margin-top:20px}
+.custom[hidden]{display:none}
+.custom label{font-family:var(--mono);font-size:10px;color:var(--m50);text-transform:uppercase;letter-spacing:.16em;display:block;margin-bottom:6px}
+.custom input{width:100%;font-family:var(--mono);font-size:20px;background:transparent;border:0;border-bottom:1px solid var(--gray);padding:2px 0 6px;color:var(--black)}
+.custom input:hover,.custom input:focus{border-bottom-color:var(--black)}
+input.txt{flex:1;min-width:200px;font-family:var(--mono);font-size:15px;background:transparent;border:0;border-bottom:1px solid var(--gray);padding:6px 0;color:var(--black)}
+input.txt:hover,input.txt:focus{border-bottom-color:var(--black)}
+.summary{font-family:var(--mono);font-size:12px;color:var(--m50);margin-right:auto}
 
 /* deploy */
 .deploy{border-top:1px solid var(--gray);padding-top:48px;display:flex;justify-content:flex-end;align-items:center;gap:24px;flex-wrap:wrap}
