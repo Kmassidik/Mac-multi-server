@@ -107,20 +107,42 @@ document.querySelectorAll('.eye').forEach(function (b) {
     });
   });
 
-  // AJAX lifecycle controls (stop/start/restart): fire without navigating; poller reflects result
+  var rendered = null;   // set of VPS names currently rendered (dashboard); used by poller + destroy
+
+  // remove a destroyed VPS from the UI live (SPA) — no full refresh
+  function afterDestroy(vpsName){
+    if (document.body.classList.contains('detail')) { location.href = '/dashboard'; return; }  // resource gone → back to list
+    document.querySelectorAll('[data-vps="' + vpsName + '"]').forEach(function(el){ el.remove(); });
+    if (rendered) rendered.delete(vpsName);
+    var c = document.querySelector('.count');
+    if (c){
+      var seen = {}, run = 0, total = 0;
+      document.querySelectorAll('[data-vps]').forEach(function(el){
+        var n = el.getAttribute('data-vps'); if (seen[n]) return; seen[n] = 1; total++;
+        if (el.querySelector('.tag.run')) run++;
+      });
+      c.textContent = run + '/' + total + ' running';
+    }
+  }
+
+  // AJAX actions (stop/start/restart/terminate): fire without navigating; UI updates live
   document.querySelectorAll('form.ajax').forEach(function(f){
     f.addEventListener('submit', function(ev){
       ev.preventDefault();
       var btn = f.querySelector('button[type=submit]');
       if (btn && btn.disabled) return;                 // in-flight → block spam clicks
+      var isDestroy = /\/destroy$/.test(f.getAttribute('action') || '');
+      var vpsName = (f.querySelector('input[name=name]') || {}).value;
       var go = function(){
         loadBtn(btn);
         fetch(f.action, { method:'POST', credentials:'include', redirect:'manual',
           headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
-          body:new URLSearchParams(new FormData(f)).toString() }).catch(function(){});
-        setTimeout(resetBtns, 45000);   // safety: don't get stuck if state never changes
+          body:new URLSearchParams(new FormData(f)).toString() })
+          .then(function(){ if (isDestroy) afterDestroy(vpsName); })
+          .catch(function(){ if (isDestroy) afterDestroy(vpsName); });
+        if (!isDestroy) setTimeout(resetBtns, 45000);   // safety for stop/start/restart
       };
-      if (f.dataset.confirm) mmsConfirm(f.dataset.confirm, false, go); else go();
+      if (f.dataset.confirm) mmsConfirm(f.dataset.confirm, f.classList.contains('danger-form'), go); else go();
     });
   });
 
@@ -151,7 +173,7 @@ document.querySelectorAll('.eye').forEach(function (b) {
   if (section && !(body && body.classList.contains('detail'))) {
     // the set of VPS currently rendered — if it changes (deploy adds / destroy removes),
     // reload once so the new row/card (e.g. a "provisioning" one) shows without a manual refresh.
-    var rendered = new Set(Array.prototype.map.call(section.querySelectorAll('[data-vps]'),
+    rendered = new Set(Array.prototype.map.call(section.querySelectorAll('[data-vps]'),
       function(el){ return el.getAttribute('data-vps'); }));
     setInterval(function(){
       fetch('/api/vps', { headers:{ 'Accept':'application/json' } })

@@ -108,7 +108,7 @@
         <div class="panel">
           <div class="sec"><h2>Danger zone</h2></div>
           <p class="hint sub2">Terminating destroys the VM and its disk permanently — this can't be undone.</p>
-          <form method="post" action="/destroy" class="danger-form" data-confirm="Destroy {{DISPLAY}}? This permanently deletes the VM and its disk.">
+          <form method="post" action="/destroy" class="ajax danger-form" data-confirm="Destroy {{DISPLAY}}? This permanently deletes the VM and its disk.">
             <input type="hidden" name="csrf" value="{{CSRF}}"><input type="hidden" name="name" value="{{NAME}}">
             <button class="btn danger" type="submit" data-loading="Terminating…">Terminate instance</button>
           </form>
