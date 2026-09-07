@@ -283,6 +283,11 @@ form.inline input:focus{border-bottom-color:var(--black)}
 #terminal{flex:1;min-height:0;height:60vh;background:#111111;padding:10px}
 .modal-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;background:var(--white);border-top:1px solid var(--gray)}
 .modal-foot .hint{margin:0;padding:0;border:0;min-height:0;font-family:var(--mono);font-size:11px}
+/* in-page confirm dialog (replaces native confirm()) */
+.confirm-box{width:min(440px,100%)}
+.confirm-body{background:var(--white);padding:24px 20px;font-family:var(--sans);font-size:14px;line-height:1.6;color:var(--black)}
+.confirm-body p{margin:0}
+.confirm-foot{justify-content:flex-end}
 
 /* responsive */
 @media (max-width:768px){

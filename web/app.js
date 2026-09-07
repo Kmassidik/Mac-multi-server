@@ -66,9 +66,45 @@ document.querySelectorAll('.eye').forEach(function (b) {
   function resetBtns(){ document.querySelectorAll('button[data-orig]').forEach(function(b){
     b.textContent = b.dataset.orig; b.disabled = false; b.classList.remove('loading'); }); }
 
-  // any non-AJAX form: show loading on its submit button before it navigates
+  // styled in-page confirmation (NEVER a native alert/confirm). Lazily built, reused.
+  function mmsConfirm(message, danger, onOk){
+    var m = document.getElementById('mmsConfirm');
+    if (!m){
+      m = document.createElement('div'); m.id = 'mmsConfirm'; m.className = 'modal'; m.hidden = true;
+      m.innerHTML =
+        '<div class="modal-box confirm-box">' +
+          '<div class="modal-head"><div class="mh-title" id="mmsConfirmTitle">Confirm</div></div>' +
+          '<div class="confirm-body"><p id="mmsConfirmMsg"></p></div>' +
+          '<div class="modal-foot confirm-foot">' +
+            '<button type="button" class="btn line" id="mmsConfirmCancel">Cancel</button>' +
+            '<button type="button" class="btn" id="mmsConfirmOk">Confirm</button>' +
+          '</div></div>';
+      document.body.appendChild(m);
+      m.addEventListener('click', function(e){ if (e.target === m) close(); });
+    }
+    var msg = m.querySelector('#mmsConfirmMsg'), ok = m.querySelector('#mmsConfirmOk'), cancel = m.querySelector('#mmsConfirmCancel');
+    msg.textContent = message;
+    ok.className = danger ? 'btn danger' : 'btn';
+    ok.textContent = danger ? 'Terminate' : 'Confirm';
+    function close(){ m.hidden = true; document.removeEventListener('keydown', esc); }
+    function esc(e){ if (e.key === 'Escape') close(); }
+    cancel.onclick = close;
+    ok.onclick = function(){ close(); onOk(); };
+    document.addEventListener('keydown', esc);
+    m.hidden = false; ok.focus();
+  }
+
+  // non-AJAX forms (terminate, deploy, rename, logout): loading on submit; styled confirm if asked
   document.querySelectorAll('form:not(.ajax)').forEach(function(f){
-    f.addEventListener('submit', function(){ loadBtn(f.querySelector('button[type=submit]')); });
+    f.addEventListener('submit', function(ev){
+      var btn = f.querySelector('button[type=submit]');
+      if (f.dataset.confirm){
+        ev.preventDefault();
+        mmsConfirm(f.dataset.confirm, f.classList.contains('danger-form'), function(){ loadBtn(btn); f.submit(); });
+        return;
+      }
+      loadBtn(btn);
+    });
   });
 
   // AJAX lifecycle controls (stop/start/restart): fire without navigating; poller reflects result
@@ -77,12 +113,14 @@ document.querySelectorAll('.eye').forEach(function (b) {
       ev.preventDefault();
       var btn = f.querySelector('button[type=submit]');
       if (btn && btn.disabled) return;                 // in-flight → block spam clicks
-      if (f.dataset.confirm && !confirm(f.dataset.confirm)) return;
-      loadBtn(btn);
-      fetch(f.action, { method:'POST', credentials:'include', redirect:'manual',
-        headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
-        body:new URLSearchParams(new FormData(f)).toString() }).catch(function(){});
-      setTimeout(resetBtns, 45000);   // safety: don't get stuck if state never changes
+      var go = function(){
+        loadBtn(btn);
+        fetch(f.action, { method:'POST', credentials:'include', redirect:'manual',
+          headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
+          body:new URLSearchParams(new FormData(f)).toString() }).catch(function(){});
+        setTimeout(resetBtns, 45000);   // safety: don't get stuck if state never changes
+      };
+      if (f.dataset.confirm) mmsConfirm(f.dataset.confirm, false, go); else go();
     });
   });
 

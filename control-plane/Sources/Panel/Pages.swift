@@ -84,7 +84,7 @@ enum Pages {
                   <div class="sub">\(idline)\(esc(v.bundle))<br>\(v.cpu) vCPU · \(gb(v.mem_mb)) · \(v.disk_gb) GB<br>\(esc(v.ip))\(host)</div>
                   <div class="acts">
                     <a class="btn line" href="/vps/\(esc(v.name))" onclick="event.stopPropagation()">Manage ↗</a>
-                    <form method="post" action="/destroy" onclick="event.stopPropagation()" onsubmit="return confirm('Destroy \(esc(v.display))? This is permanent.')">
+                    <form method="post" action="/destroy" class="danger-form" data-confirm="Destroy \(esc(v.display))? This permanently deletes the VM and its disk." onclick="event.stopPropagation()">
                       <input type="hidden" name="csrf" value="\(csrf)"><input type="hidden" name="name" value="\(esc(v.name))">
                       <button class="btn line" type="submit" data-loading="Terminating…">Terminate</button>
                     </form>
@@ -109,7 +109,7 @@ enum Pages {
               <td class="mono muted">\(esc(created))</td>
               <td class="row-act">
                 <a class="btn line sm" href="/vps/\(esc(v.name))" onclick="event.stopPropagation()">Manage&nbsp;↗</a>
-                <form method="post" action="/destroy" onclick="event.stopPropagation()" onsubmit="return confirm('Destroy \(esc(v.display))? This is permanent.')">
+                <form method="post" action="/destroy" class="danger-form" data-confirm="Destroy \(esc(v.display))? This permanently deletes the VM and its disk." onclick="event.stopPropagation()">
                   <input type="hidden" name="csrf" value="\(csrf)"><input type="hidden" name="name" value="\(esc(v.name))">
                   <button class="btn line sm danger-text" type="submit" data-loading="…">Terminate</button>
                 </form>
