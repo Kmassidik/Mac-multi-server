@@ -152,7 +152,13 @@ document.querySelectorAll('.eye').forEach(function (b) {
   if (name && body.classList.contains('detail')) {
     var tag = document.getElementById('stTag');
     var cur = tag ? tag.textContent.trim() : '';
-    function applyDetail(s){
+    function applyDetail(s, prev){
+      // becoming ready from a transitional state fills in specs (SSH domain, IP) that were
+      // blank/placeholder while provisioning — reload once to show them (unless the terminal is open).
+      if (s === 'running' && (prev === 'provisioning' || prev === 'starting' || prev === 'restarting')){
+        var tm = document.getElementById('termModal');
+        if (!tm || tm.hidden !== false) { location.reload(); return; }
+      }
       resetBtns();
       if (tag){ tag.textContent = s; tag.className = 'tag ' + cls(s); }
       var stopped = s === 'stopped', running = s === 'running';
@@ -163,7 +169,7 @@ document.querySelectorAll('.eye').forEach(function (b) {
     setInterval(function(){
       fetch('/vps/' + encodeURIComponent(name) + '/status', { headers:{ 'Accept':'application/json' } })
         .then(function(r){ return r.ok ? r.json() : null; })
-        .then(function(d){ if (d && d.status && d.status !== cur){ cur = d.status; applyDetail(d.status); } })
+        .then(function(d){ if (d && d.status && d.status !== cur){ var prev = cur; cur = d.status; applyDetail(d.status, prev); } })
         .catch(function(){});
     }, 3000);
   }

@@ -147,7 +147,8 @@ enum Pages {
 
         // SSH by domain (Cloudflare tunnel) — never expose an IP to tenants.
         let sshHost = v.ssh_host ?? ""
-        let ssh = sshHost.isEmpty ? "ssh admin@\(v.ip)" : "ssh admin@\(sshHost)"
+        let transitioning = ["provisioning", "starting", "restarting"].contains(v.status)
+        let ssh = sshHost.isEmpty ? (transitioning ? "— still provisioning… —" : "ssh admin@\(v.ip)") : "ssh admin@\(sshHost)"
         // one-time tenant setup (only meaningful once the VPS has a domain route)
         let sshSetup = sshHost.isEmpty ? "" : """
         <label class="fld">First time only — on your machine</label>
@@ -174,7 +175,10 @@ enum Pages {
             "CODE": esc(b?.code ?? ""),
             "CPU": String(v.cpu), "MEM": gb(v.mem_mb), "DISK": String(v.disk_gb),
             "IP": esc(v.ip),
-            "SSHHOST": sshHost.isEmpty ? "<span class=\"muted\">— set Cloudflare keys in .env —</span>" : esc(sshHost),
+            "SSHHOST": sshHost.isEmpty
+                ? (transitioning ? "<span class=\"muted\">— provisioning… —</span>"
+                                 : "<span class=\"muted\">— no domain (set Cloudflare keys in .env) —</span>")
+                : esc(sshHost),
             "SSH": esc(ssh),
             "SSHSETUP": sshSetup,
             "CREATED": esc(v.created),
