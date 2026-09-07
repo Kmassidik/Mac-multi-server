@@ -108,6 +108,17 @@ JSON
     || { _vps_set_status "$name" failed; die "key injection failed"; }
   ok "SSH key installed"
 
+  # also authorize operator/tenant keys so people can `ssh admin@vpsN.$DOMAIN` from their own
+  # machines (the host key above is only what the web terminal uses server-side).
+  if [ -n "${VPS_AUTHORIZED_KEYS:-}" ] && [ -f "$VPS_AUTHORIZED_KEYS" ]; then
+    local added=0
+    while IFS= read -r k; do
+      [ -n "$k" ] || continue; case "$k" in \#*) continue ;; esac
+      ssh $O admin@"$ip" "umask 077; grep -qxF '$k' ~/.ssh/authorized_keys 2>/dev/null || printf '%s\n' '$k' >> ~/.ssh/authorized_keys" >/dev/null 2>&1 && added=$((added+1)) || warn "an operator key failed to add"
+    done < "$VPS_AUTHORIZED_KEYS"
+    [ "$added" -gt 0 ] && ok "authorized $added operator key(s)"
+  fi
+
   local app_port=""
   if [ "$bundle" != blank ] && [ -f "$TEMPLATES_DIR/$bundle/install.sh" ]; then
     log "installing bundle: $bundle…"
