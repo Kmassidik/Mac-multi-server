@@ -97,7 +97,9 @@ func installRoutes(on server: HttpServer, auth: Auth, sessions: Sessions) {
         guard let origin = req.headers["origin"], !origin.isEmpty else { return true }  // non-browser client
         let dom = Config.shared["DOMAIN"], panel = Config.shared.or("PANEL_SUBDOMAIN", "panel")
         if !dom.isEmpty, origin == "https://\(panel).\(dom)" { return true }
-        return origin.hasPrefix("http://127.0.0.1") || origin.hasPrefix("http://localhost")
+        // localhost dev only — parse the host so "127.0.0.1.evil.com" can't slip a prefix match
+        if let host = URL(string: origin)?.host { return host == "127.0.0.1" || host == "localhost" }
+        return false
     }
 
     // Monitoring (Beszel) has its own login and is routed straight to its hub by cloudflared,

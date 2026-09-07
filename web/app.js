@@ -229,17 +229,17 @@ document.querySelectorAll('.eye').forEach(function (b) {
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(d){
         if (!d){ body.innerHTML = '<p class="hint sub2">Couldn’t load metrics.</p>'; st.textContent=''; return; }
+        // stopped VPS → no live metrics (authoritative; checked before hub errors)
+        if (d.vps === 'stopped'){
+          st.textContent = 'STOPPED'; st.className = 'meta no';
+          body.innerHTML = '<p class="hint sub2">This VPS is stopped — start it to see live metrics.</p>';
+          return;
+        }
         if (d.error){
           var msg = d.error === 'no_agent' ? 'No monitoring agent is reporting for this VPS yet — new VPS auto-install it; for older ones, redeploy or add it from Beszel.'
                   : d.error === 'not_configured' ? 'Monitoring isn’t configured (set BESZEL_* in .env).'
                   : 'Monitoring hub is unreachable right now.';
           body.innerHTML = '<p class="hint sub2">' + msg + '</p>'; st.textContent=''; return;
-        }
-        // stopped VPS → no live metrics (don't show the stale shutdown snapshot as if live)
-        if (d.vps === 'stopped'){
-          st.textContent = 'STOPPED'; st.className = 'meta no';
-          body.innerHTML = '<p class="hint sub2">This VPS is stopped — start it to see live metrics.</p>';
-          return;
         }
         if (d.live){
           st.textContent = 'UP'; st.className = 'meta ok';

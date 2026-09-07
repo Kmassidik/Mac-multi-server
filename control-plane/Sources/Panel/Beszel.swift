@@ -32,6 +32,9 @@ enum Beszel {
     /// status; `live` is true only when the agent is actually reporting (else numbers are stale).
     static func metricsJSON(ip: String, vps: String) -> String {
         func err(_ e: String) -> String { "{\"error\":\"\(e)\",\"vps\":\"\(vps)\"}" }
+        // a stopped VPS has no live metrics — answer authoritatively without touching the hub,
+        // so the "stopped" message shows even when the hub is unreachable.
+        if vps == "stopped" { return "{\"ok\":true,\"vps\":\"stopped\",\"status\":\"stopped\",\"live\":false}" }
         guard !Config.shared["BESZEL_ADMIN_EMAIL"].isEmpty else { return err("not_configured") }
         guard let tok = authToken() else { return err("hub_unreachable") }
         var comps = URLComponents(string: "\(hub)/api/collections/systems/records")!
