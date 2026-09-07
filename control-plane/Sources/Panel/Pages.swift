@@ -30,7 +30,8 @@ enum Pages {
     static func statusClass(_ s: String) -> String {
         if s == "running" { return "run" }
         if s == "stopped" { return "" }
-        return "warn"   // unhealthy / flapping / restarting
+        if s == "provisioning" || s == "starting" || s == "restarting" { return "prog" }  // in-progress (pulses)
+        return "warn"   // unhealthy / flapping / failed
     }
 
     static func setup(error: String?, csrf: String) -> String {

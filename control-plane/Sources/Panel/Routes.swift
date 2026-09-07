@@ -266,7 +266,7 @@ func installRoutes(on server: HttpServer, auth: Auth, sessions: Sessions) {
                      mem:  Int(f["mem"]  ?? "") ?? 4096,
                      disk: Int(f["disk"] ?? "") ?? 40,
                      label: f["label"] ?? "")
-        return redirect("/dashboard?notice=Deploying%20a%20new%20VPS%E2%80%A6%20refresh%20in%20~1%20min.")
+        return redirect("/dashboard")   // the new VPS shows up as a live "provisioning" flag
     }
 
     server.POST["/destroy"] = { req in

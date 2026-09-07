@@ -59,7 +59,8 @@ document.querySelectorAll('.eye').forEach(function (b) {
 
 // action buttons: loading state; AJAX for lifecycle controls; live status polling.
 (function () {
-  function cls(s){ return s === 'running' ? 'run' : (s === 'stopped' ? '' : 'warn'); }
+  function cls(s){ return s === 'running' ? 'run' : (s === 'stopped' ? '' :
+    ((s === 'provisioning' || s === 'starting' || s === 'restarting') ? 'prog' : 'warn')); }
   function loadBtn(b){ if(!b) return; if(b.dataset.orig == null) b.dataset.orig = b.textContent;
     if(b.dataset.loading) b.textContent = b.dataset.loading; b.disabled = true; b.classList.add('loading'); }
   function resetBtns(){ document.querySelectorAll('button[data-orig]').forEach(function(b){
@@ -110,10 +111,20 @@ document.querySelectorAll('.eye').forEach(function (b) {
   // dashboard: poll all VPS, update every card + table row (same data-vps) + count, in place
   var section = document.getElementById('serversSection');
   if (section && !(body && body.classList.contains('detail'))) {
+    // the set of VPS currently rendered — if it changes (deploy adds / destroy removes),
+    // reload once so the new row/card (e.g. a "provisioning" one) shows without a manual refresh.
+    var rendered = new Set(Array.prototype.map.call(section.querySelectorAll('[data-vps]'),
+      function(el){ return el.getAttribute('data-vps'); }));
     setInterval(function(){
       fetch('/api/vps', { headers:{ 'Accept':'application/json' } })
         .then(function(r){ return r.ok ? r.json() : null; })
-        .then(function(list){ if (!list) return; var run = 0;
+        .then(function(list){ if (!list) return;
+          var names = list.map(function(v){ return v.name; });
+          var changed = names.length !== rendered.size
+            || names.some(function(n){ return !rendered.has(n); })
+            || Array.from(rendered).some(function(n){ return names.indexOf(n) < 0; });
+          if (changed && !document.body.classList.contains('show-deploy')) { location.reload(); return; }
+          var run = 0;
           list.forEach(function(v){ if (v.status === 'running') run++;
             document.querySelectorAll('[data-vps="' + v.name + '"]').forEach(function(el){
               var tg = el.querySelector('.tag'); if (tg){ tg.textContent = v.status; tg.className = 'tag ' + cls(v.status); }

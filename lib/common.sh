@@ -4,6 +4,11 @@
 
 set -euo pipefail
 
+# The control panel runs as a LaunchDaemon with a minimal PATH (/usr/bin:/bin), which omits
+# Homebrew — so panel-invoked `mms deploy` couldn't find tart/sshpass/cloudflared and aborted.
+# Prepend the Homebrew bins so every mms command resolves them regardless of who launched it.
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LIB_DIR="$ROOT_DIR/lib"
 STATE_DIR="$ROOT_DIR/state"

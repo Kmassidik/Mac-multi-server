@@ -83,6 +83,14 @@ vps_deploy() {
   [ -f "$VPS_SSH_PUBKEY" ] || die "no ssh pubkey at $VPS_SSH_PUBKEY (set VPS_SSH_PUBKEY in .env)"
   local KEY; KEY="$(cat "$VPS_SSH_PUBKEY")"
 
+  # write state up front (status "provisioning") so the dashboard shows a live flag immediately
+  # and streams it to "running" when done — no "refresh in a minute".
+  local created; created="$(date -u +%FT%TZ)"; mkdir -p "$STATE_DIR"
+  cat > "$STATE_DIR/$name.json" <<JSON
+{ "name":"$name","label":"$label","bundle":"$bundle","status":"provisioning","cpu":$cpu,"mem_mb":$mem,"disk_gb":$disk,
+  "ip":"","app_port":"","hostname":"","ssh_host":"","created":"$created" }
+JSON
+
   log "deploying $name ($bundle · ${cpu}vCPU · ${mem}MB · ${disk}GB)"
   tart clone "$VPS_BASE_IMAGE" "$name"
   tart set "$name" --cpu "$cpu" --memory "$mem" --disk-size "$disk"
@@ -90,14 +98,14 @@ vps_deploy() {
 
   log "waiting for DHCP lease…"
   local ip=""; for _ in $(seq 1 40); do ip="$(tart ip "$name" 2>/dev/null || true)"; [ -n "$ip" ] && break; sleep 3; done
-  [ -n "$ip" ] || die "no IP after 120s — is pf allowing DHCP? (./mms pf-fix, docs/networking.md)"
+  [ -n "$ip" ] || { _vps_set_status "$name" failed; die "no IP after 120s — is pf allowing DHCP? (./mms pf-fix, docs/networking.md)"; }
   ok "IP: $ip"
 
   local O="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10"
   for _ in $(seq 1 10); do sshpass -p admin ssh $O -o PreferredAuthentications=password admin@"$ip" true 2>/dev/null && break; sleep 3; done
   sshpass -p admin ssh $O -o PreferredAuthentications=password admin@"$ip" \
     "umask 077; mkdir -p ~/.ssh; grep -qxF '$KEY' ~/.ssh/authorized_keys 2>/dev/null || printf '%s\n' '$KEY' >> ~/.ssh/authorized_keys" \
-    || die "key injection failed"
+    || { _vps_set_status "$name" failed; die "key injection failed"; }
   ok "SSH key installed"
 
   local app_port=""
@@ -127,7 +135,7 @@ vps_deploy() {
   mkdir -p "$STATE_DIR"
   cat > "$STATE_DIR/$name.json" <<JSON
 { "name":"$name","label":"$label","bundle":"$bundle","status":"running","cpu":$cpu,"mem_mb":$mem,"disk_gb":$disk,
-  "ip":"$ip","app_port":"$app_port","hostname":"","ssh_host":"$ssh_host","created":"$(date -u +%FT%TZ)" }
+  "ip":"$ip","app_port":"$app_port","hostname":"","ssh_host":"$ssh_host","created":"$created" }
 JSON
 
   echo

@@ -264,6 +264,11 @@ form.inline input:focus{border-bottom-color:var(--black)}
 .btn.line.ctl-ok:hover{background:var(--green);color:var(--black);border-color:var(--green)}
 .btn.line.ctl-warn{border-color:#e2b483;color:var(--warn)}
 .btn.line.ctl-warn:hover{background:var(--warn);color:var(--white);border-color:var(--warn)}
+/* in-progress status flag (provisioning / starting / restarting) — a pulsing amber dot */
+@keyframes mmsPulse{0%,100%{opacity:1}50%{opacity:.2}}
+.srvcard .tag.prog,.restable .tag.prog,.dh-title .tag.prog{color:var(--warn)}
+.srvcard .tag.prog::before,.restable .tag.prog::before,.dh-title .tag.prog::before{content:"● ";color:var(--warn);display:inline-block;animation:mmsPulse 1s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.tag.prog::before{animation:none}}
 
 .meta.ok{color:#0a8f45} .meta.no{color:#d92d20}
 
