@@ -18,5 +18,11 @@ let package = Package(
             dependencies: [.product(name: "Swifter", package: "swifter"), "CPTY"],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
+        // pure-function unit tests (no I/O, no network): `swift test`
+        .testTarget(
+            name: "PanelTests",
+            dependencies: ["Panel"],
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
     ]
 )
