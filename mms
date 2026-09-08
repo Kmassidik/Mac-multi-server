@@ -7,14 +7,15 @@
 #   ./mms stop <vps-N>     # stop the VM (won't auto-restart until start)
 #   ./mms start <vps-N>    # start a stopped VM
 #   ./mms watchdog         # run one health-check pass (the LaunchAgent runs this each interval)
+#   ./mms selftest [--full]# smoke-test the happy path (--full adds a deploy→destroy round-trip)
 #   ./mms ls
 #   ./mms logs <vps-N>
 #   ./mms pf-fix           # allow VM DHCP through pf (needs sudo)
 #   ./mms install          # full host setup
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-. "$HERE/lib/common.sh"; . "$HERE/lib/cloudflare.sh"; . "$HERE/lib/vps.sh"; . "$HERE/lib/watchdog.sh"
+. "$HERE/lib/common.sh"; . "$HERE/lib/cloudflare.sh"; . "$HERE/lib/vps.sh"; . "$HERE/lib/watchdog.sh"; . "$HERE/lib/selftest.sh"
 
-usage(){ sed -n '4,13p' "$HERE/mms" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+usage(){ sed -n '4,14p' "$HERE/mms" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
 
 cmd="${1:-}"; shift || true
 case "$cmd" in
@@ -32,6 +33,7 @@ case "$cmd" in
   stop)    load_env; vps_stop    "${1:?usage: mms stop <vps-N>}" ;;
   start)   load_env; vps_start   "${1:?usage: mms start <vps-N>}" ;;
   watchdog) load_env; watchdog_tick ;;
+  selftest) selftest "${1:-}" ;;
   ls|list) load_env; vps_list ;;
   logs)    tail -n 60 "/tmp/io.macmultiserver.${1:?usage: mms logs <vps-N>}.log" 2>/dev/null || echo "(no logs)";;
   pf-fix)  . "$HERE/lib/pf.sh"; [ "$(id -u)" = 0 ] || exec sudo "$0" pf-fix; pf_allow_dhcp ;;
