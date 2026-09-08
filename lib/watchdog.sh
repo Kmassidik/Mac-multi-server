@@ -41,6 +41,13 @@ _wd_status(){ python3 -c 'import json,sys
 try: print(json.load(open(sys.argv[1])).get("status",""))
 except Exception: print("")' "$1" 2>/dev/null || echo ""; }
 
+# has this state file gone untouched for >= N seconds? (status hasn't advanced in a while)
+_wd_stuck(){ local mt now; mt="$(stat -f %m "$1" 2>/dev/null || echo 0)"; now="$(date +%s)"
+  [ "$(( now - mt ))" -ge "$2" ]; }
+# does tart still know about this VM? (0 = yes)
+_wd_vm_exists(){ local tart; tart="$(_tart_bin)"; [ -n "$tart" ] || return 1
+  _wd_run_to 8 "$tart" list 2>/dev/null | grep -qw "$1"; }
+
 # watchdog_probe <name> → 0 healthy, 1 unhealthy (no IP = unhealthy)
 watchdog_probe(){
   local name="$1" ip tart; tart="$(_tart_bin)"
@@ -73,7 +80,17 @@ watchdog_tick(){
     # readiness wait — probing a booting VM would wrongly count failures toward a restart).
     case "$status" in
       stopped)               wd_log "$name skip (stopped)"; continue ;;
-      starting|restarting)   wd_log "$name skip ($status)"; continue ;;
+      provisioning|starting|restarting)
+        # a booting/deploying VM — never count health failures against it. But if it has sat in
+        # a transient state far too long (deploy/start died mid-flight, e.g. a kill -9 the trap
+        # can't catch), reconcile: no VM in tart → mark "failed" so it never lingers forever.
+        if _wd_stuck "$f" "${WATCHDOG_STUCK_SECS:-600}" && ! _wd_vm_exists "$name"; then
+          _vps_set_status "$name" "failed"
+          wd_log "$name stuck in '$status' >${WATCHDOG_STUCK_SECS:-600}s with no VM — marked failed (recovery)"
+        else
+          wd_log "$name skip ($status)"
+        fi
+        continue ;;
     esac
 
     fails="$(_health_get "$name" fails 0)"

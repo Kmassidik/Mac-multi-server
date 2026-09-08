@@ -91,9 +91,15 @@ vps_deploy() {
   "ip":"","app_port":"","hostname":"","ssh_host":"","created":"$created" }
 JSON
 
+  # safety net: if we exit for ANY reason before the final "running" write (a set -e trip,
+  # or the process being killed mid-deploy), flip the VPS out of "provisioning" → "failed"
+  # so it never gets stuck in a transient state. Cleared once deploy completes.
+  trap '_vps_set_status "'"$name"'" failed' EXIT INT TERM
+
   log "deploying $name ($bundle · ${cpu}vCPU · ${mem}MB · ${disk}GB)"
-  tart clone "$VPS_BASE_IMAGE" "$name"
-  tart set "$name" --cpu "$cpu" --memory "$mem" --disk-size "$disk"
+  # guard VM creation so a failure marks the VPS "failed" instead of leaving it stuck "provisioning"
+  tart clone "$VPS_BASE_IMAGE" "$name" || { _vps_set_status "$name" failed; die "clone failed — base image reachable? disk ok? ($VPS_BASE_IMAGE)"; }
+  tart set "$name" --cpu "$cpu" --memory "$mem" --disk-size "$disk" || { _vps_set_status "$name" failed; die "tart set failed (cpu/mem/disk)"; }
   _vps_run "$name"; ok "VM running (persistent)"
 
   log "waiting for DHCP lease…"
@@ -148,6 +154,7 @@ JSON
 { "name":"$name","label":"$label","bundle":"$bundle","status":"running","cpu":$cpu,"mem_mb":$mem,"disk_gb":$disk,
   "ip":"$ip","app_port":"$app_port","hostname":"","ssh_host":"$ssh_host","created":"$created" }
 JSON
+  trap - EXIT INT TERM   # deploy succeeded — disarm the "failed" safety net
 
   echo
   echo "  ✓ $name  ● running  ·  Ubuntu · ${cpu}vCPU/${mem}MB/${disk}GB · $bundle"

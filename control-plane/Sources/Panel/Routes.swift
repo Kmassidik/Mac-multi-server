@@ -1,18 +1,60 @@
 import Foundation
 import Swifter
 
-/// In-memory sessions + per-IP login rate-limiting. Thread-safe.
+/// JSON shapes the UI polls. `cls` is the status→CSS-class, computed server-side so the mapping
+/// isn't duplicated in JavaScript.
+struct StatusDTO: Encodable { let status: String; let cls: String }
+struct VPSRowDTO: Encodable { let name: String; let status: String; let cls: String }
+
+/// Sessions + per-IP login rate-limiting. Thread-safe.
+///
+/// Tokens carry an expiry and are persisted to `state/panel-sessions.json` (0600), so a panel
+/// restart or crash (launchd relaunches it) doesn't log everyone out — the session survives —
+/// while a bounded TTL still expires stale/stolen cookies. Rate-limit state stays in-memory
+/// (short-lived by design). Falls back to memory-only if the file can't be written.
 final class Sessions {
-    private var tokens = Set<String>()
+    static let ttl: TimeInterval = 7 * 24 * 3600   // 7 days
+
+    private var tokens: [String: Date] = [:]        // token → expiry
     private var fails: [String: (n: Int, at: Date)] = [:]
     private let q = DispatchQueue(label: "panel.sessions")
+    private let file: URL?
+
+    init(file: URL? = nil) {
+        self.file = file
+        if let file, let d = try? Data(contentsOf: file),
+           let raw = try? JSONDecoder().decode([String: Double].self, from: d) {
+            let now = Date()
+            for (t, exp) in raw where exp > now.timeIntervalSince1970 {
+                tokens[t] = Date(timeIntervalSince1970: exp)
+            }
+        }
+    }
+
+    // caller must hold `q`. Writes the live (unexpired) token set to disk, 0600.
+    private func persist() {
+        guard let file else { return }
+        let now = Date()
+        let live = tokens.filter { $0.value > now }.mapValues { $0.timeIntervalSince1970 }
+        guard let d = try? JSONEncoder().encode(live) else { return }
+        try? d.write(to: file, options: .atomic)
+        try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
+    }
 
     func new() -> String {
         let t = (0..<32).map { _ in String(format: "%02x", Int.random(in: 0...255)) }.joined()
-        q.sync { _ = tokens.insert(t) }; return t
+        q.sync { tokens[t] = Date().addingTimeInterval(Self.ttl); persist() }
+        return t
     }
-    func valid(_ t: String?) -> Bool { guard let t else { return false }; return q.sync { tokens.contains(t) } }
-    func drop(_ t: String?)  { guard let t else { return }; q.sync { _ = tokens.remove(t) } }
+    func valid(_ t: String?) -> Bool {
+        guard let t else { return false }
+        return q.sync {
+            guard let exp = tokens[t] else { return false }
+            if exp <= Date() { tokens[t] = nil; persist(); return false }   // expired → forget it
+            return true
+        }
+    }
+    func drop(_ t: String?)  { guard let t else { return }; q.sync { tokens[t] = nil; persist() } }
     func lockedOut(_ ip: String) -> Bool {
         q.sync {
             guard let f = fails[ip] else { return false }
@@ -153,19 +195,24 @@ func installRoutes(on server: HttpServer, auth: Auth, sessions: Sessions) {
         let notice = (req.queryParams.first(where: { $0.0 == "notice" })?.1).flatMap { $0.removingPercentEncoding ?? $0 }
         return html(Pages.vpsDetail(vps: v, csrf: token(req) ?? "", notice: notice))
     }
-    // live status (JSON) — polled by the UI so stop/start/restart reflect without a refresh
-    func jsonOK(_ s: String) -> HttpResponse {
+    // JSON responses — polled by the UI so stop/start/restart reflect without a refresh.
+    // Encoded (not hand-built) so there's no escaping to get wrong; `cls` is computed once here
+    // (Pages.statusClass) and sent to the client, so the status→CSS-class mapping lives in ONE place.
+    func jsonOK(_ s: String) -> HttpResponse {          // for pre-built JSON strings (Beszel proxy)
         .raw(200, "OK", ["Content-Type": "application/json", "Cache-Control": "no-store"]) { try $0.write([UInt8](s.utf8)) }
+    }
+    func jsonEncode<T: Encodable>(_ v: T) -> HttpResponse {
+        let data = (try? JSONEncoder().encode(v)) ?? Data("null".utf8)
+        return .raw(200, "OK", ["Content-Type": "application/json", "Cache-Control": "no-store"]) { try $0.write([UInt8](data)) }
     }
     server.GET["/vps/:name/status"] = { req in
         guard authed(req) else { return .raw(401, "Unauthorized", nil) { _ in } }
         guard let v = Store.get(req.params[":name"] ?? "") else { return .notFound }
-        return jsonOK("{\"status\":\"\(v.status)\"}")   // status is a controlled vocab — safe
+        return jsonEncode(StatusDTO(status: v.status, cls: Pages.statusClass(v.status)))
     }
     server.GET["/api/vps"] = { req in
         guard authed(req) else { return .raw(401, "Unauthorized", nil) { _ in } }
-        let items = Store.list().map { "{\"name\":\"\($0.name)\",\"status\":\"\($0.status)\"}" }.joined(separator: ",")
-        return jsonOK("[\(items)]")   // names are validated ^[a-zA-Z0-9._-]+$
+        return jsonEncode(Store.list().map { VPSRowDTO(name: $0.name, status: $0.status, cls: Pages.statusClass($0.status)) })
     }
     // live metrics for the Monitoring tab (panel proxies the Beszel hub, matched by VM IP)
     server.GET["/vps/:name/metrics"] = { req in

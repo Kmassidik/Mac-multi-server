@@ -13,7 +13,7 @@ func argValue(_ flag: String) -> String? {
 let port = UInt16(argValue("--port") ?? Config.shared["PANEL_PORT"]) ?? 8088
 let bind = "127.0.0.1"                    // never exposed directly; reach it via Cloudflare
 let auth = Auth(dir: rootURL("state"))
-let sessions = Sessions()
+let sessions = Sessions(file: rootURL("state/panel-sessions.json"))
 
 let server = HttpServer()
 server.listenAddressIPv4 = bind

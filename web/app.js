@@ -59,8 +59,7 @@ document.querySelectorAll('.eye').forEach(function (b) {
 
 // action buttons: loading state; AJAX for lifecycle controls; live status polling.
 (function () {
-  function cls(s){ return s === 'running' ? 'run' : (s === 'stopped' ? '' :
-    ((s === 'provisioning' || s === 'starting' || s === 'restarting') ? 'prog' : 'warn')); }
+  // status→CSS-class now comes from the server (StatusDTO.cls / VPSRowDTO.cls) — single source of truth.
   function loadBtn(b){ if(!b) return; if(b.dataset.orig == null) b.dataset.orig = b.textContent;
     if(b.dataset.loading) b.textContent = b.dataset.loading; b.disabled = true; b.classList.add('loading'); }
   function resetBtns(){ document.querySelectorAll('button[data-orig]').forEach(function(b){
@@ -152,7 +151,7 @@ document.querySelectorAll('.eye').forEach(function (b) {
   if (name && body.classList.contains('detail')) {
     var tag = document.getElementById('stTag');
     var cur = tag ? tag.textContent.trim() : '';
-    function applyDetail(s, prev){
+    function applyDetail(s, prev, klass){
       // becoming ready from a transitional state fills in specs (SSH domain, IP) that were
       // blank/placeholder while provisioning — reload once to show them (unless the terminal is open).
       if (s === 'running' && (prev === 'provisioning' || prev === 'starting' || prev === 'restarting')){
@@ -160,7 +159,7 @@ document.querySelectorAll('.eye').forEach(function (b) {
         if (!tm || tm.hidden !== false) { location.reload(); return; }
       }
       resetBtns();
-      if (tag){ tag.textContent = s; tag.className = 'tag ' + cls(s); }
+      if (tag){ tag.textContent = s; tag.className = 'tag ' + (klass || ''); }
       var stopped = s === 'stopped', running = s === 'running';
       var st = document.getElementById('cStart'), sp = document.getElementById('cStop'), rs = document.getElementById('cRestart');
       if (st) st.hidden = !stopped; if (sp) sp.hidden = stopped; if (rs) rs.hidden = stopped;
@@ -169,7 +168,7 @@ document.querySelectorAll('.eye').forEach(function (b) {
     setInterval(function(){
       fetch('/vps/' + encodeURIComponent(name) + '/status', { headers:{ 'Accept':'application/json' } })
         .then(function(r){ return r.ok ? r.json() : null; })
-        .then(function(d){ if (d && d.status && d.status !== cur){ var prev = cur; cur = d.status; applyDetail(d.status, prev); } })
+        .then(function(d){ if (d && d.status && d.status !== cur){ var prev = cur; cur = d.status; applyDetail(d.status, prev, d.cls); } })
         .catch(function(){});
     }, 3000);
   }
@@ -193,7 +192,7 @@ document.querySelectorAll('.eye').forEach(function (b) {
           var run = 0;
           list.forEach(function(v){ if (v.status === 'running') run++;
             document.querySelectorAll('[data-vps="' + v.name + '"]').forEach(function(el){
-              var tg = el.querySelector('.tag'); if (tg){ tg.textContent = v.status; tg.className = 'tag ' + cls(v.status); }
+              var tg = el.querySelector('.tag'); if (tg){ tg.textContent = v.status; tg.className = 'tag ' + (v.cls || ''); }
             });
           });
           var c = document.querySelector('.count'); if (c) c.textContent = run + '/' + list.length + ' running';
