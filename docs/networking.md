@@ -73,4 +73,23 @@ ssh admin@vpsN.$DOMAIN
 `ssh://192.168.64.x:22` inside the bridge. **Tenant handover:** give them only `vpsN.$DOMAIN`, the
 one-line `~/.ssh/config` snippet, and their key — they never see an IP or touch the host. The
 control-plane detail page (`/vps/:name`) shows the exact `ssh` command and this snippet with a
-copy button, plus a browser-based web terminal (see [control-plane.md](control-plane.md)).
+copy button (on its **Access** tab), plus a browser-based web terminal (see
+[control-plane.md](control-plane.md)).
+
+### Two things a direct SSH needs (and which layer provides them)
+To `ssh admin@vpsN.$DOMAIN` from a user's own machine, **both** must be true:
+1. **Transport** — `cloudflared` installed locally + the `Host *.$DOMAIN` / `ProxyCommand
+   cloudflared access ssh --hostname %h` block in `~/.ssh/config` (shown on each VPS's Access tab).
+   This gets the connection to the VM; no IP or open port is involved.
+2. **Authorization** — the user's **public key** must be in the VPS's `~/.ssh/authorized_keys`.
+
+Every deploy always authorizes the **host's** own key (`VPS_SSH_PUBKEY`) — that's the key the
+panel's **web terminal** uses **server-side** over the Tart bridge, so the in-browser terminal
+always works with no per-user setup. To let *people* SSH in directly from their own machines, set
+**`VPS_AUTHORIZED_KEYS`** in `.env` to a file of extra public keys (one per line — e.g. laptop /
+team keys); the deploy authorizes each of them on every new VPS. Those users still also need
+requirement (1) above.
+
+So the two layers are: **web terminal** = host key, server-side, always available; **direct SSH** =
+the user's own transport (cloudflared config) **and** their key authorized on the VPS. In neither
+case is any public or internal IP exposed.

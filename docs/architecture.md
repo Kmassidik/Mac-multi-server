@@ -56,11 +56,29 @@ pieces fit and why each choice was made.
 - **Domain SSH, no IPs:** each deploy adds `vpsN.$DOMAIN → ssh://192.168.64.x:22` to the tunnel; tenants run `ssh admin@vpsN.$DOMAIN` after a one-time `~/.ssh/config` cloudflared snippet. No public or internal IP is exposed, and no jump host is used.
 
 ## Deploy flow (summary — see how-it-works.md)
-`click → disk guard → tart clone → tart set specs → launchd run (persistent) → wait for IP → inject key → install bundle → beszel agent → cloudflare ssh route → record state`
+`click → disk guard → write "provisioning" state → tart clone → tart set specs → launchd run (persistent) → wait for IP → inject key → install bundle → beszel agent → cloudflare ssh route → record "running" state`
 
 ## Persistence
 - Each VPS runs under **launchd** so it survives reboot.
 - The control plane and cloudflared are launchd services too.
+
+## Status model
+Every VPS carries a `status` in `state/<name>.json`, and the console renders it live. The vocabulary:
+
+| Status | Meaning |
+|---|---|
+| `provisioning` | deploy in progress — written **up front** so the console shows the instance immediately (pulsing amber), flipped to `running` when the VM is up and set up |
+| `running` | up and reachable over SSH (the readiness probe answered) |
+| `stopped` | deliberately stopped (`./mms stop` / Stop) — won't auto-restart; the watchdog skips it |
+| `starting` / `restarting` | a Start / Restart is booting the VM; becomes `running` **only once SSH actually answers** (readiness probe), so the web-terminal button stays disabled until it's truly ready |
+| `unhealthy` | a health probe failed (below the restart threshold, or waiting to recover) |
+| `flapping` | restarted too many times inside the back-off window — left alone instead of looping |
+| `failed` | deploy couldn't finish (e.g. no DHCP lease, key injection failed) |
+
+`provisioning`, `starting`, and `restarting` are the **transitional** states (rendered as a
+pulsing amber flag). Start/restart set the transitional status, then a backgrounded readiness
+wait (`tart ip` resolves **and** `ssh admin@<ip> true` succeeds) flips it to `running` — that's
+why the console can leave the terminal button disabled until the guest has finished booting.
 
 ## Failure & recovery
 Two independent layers keep the fleet alive, and it's worth being precise about what each covers.
@@ -82,7 +100,9 @@ pass, for every VPS whose desired state isn't `stopped`:
 - **Back-off (anti-flap):** at most `WATCHDOG_MAX_RESTARTS` (default **3**) restarts inside
   `WATCHDOG_BACKOFF_WINDOW` (default **900s**). Exceed that and the VPS is marked `flapping` and
   left alone — no restart loop. The counter resets once the window elapses.
-- A **deliberately Stopped** VPS (status `stopped`) is skipped entirely — never probed or restarted.
+- A **deliberately Stopped** VPS (status `stopped`) is skipped entirely — never probed or
+  restarted. **Transitional** states (`starting`, `restarting`) are also skipped: those actions run
+  their own readiness wait, so probing a still-booting VM would wrongly count failures.
 
 Status lands in `state/<name>.json`, so the dashboard reflects real health; the log is
 `/tmp/io.macmultiserver.watchdog.log`. This is **auto-recovery** — distinct from Beszel, which is

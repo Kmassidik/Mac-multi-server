@@ -22,12 +22,16 @@ to deploy/monitor them, and Cloudflare to give each one a public hostname — no
 - **App bundles** — deploy blank, or pre-loaded with an agent: **OpenClaw** or **Hermes Agent**.
 - **Domain SSH, no IPs** — reach a VPS with `ssh admin@vpsN.yourdomain.com` through the Cloudflare
   tunnel (one-time `~/.ssh/config` cloudflared snippet). No public or internal IP, no jump host.
-- **Manage from the panel** — a per-VPS detail page with specs, copy-paste SSH, **rename** (a Name
-  tag; the id stays `vps-N`), **Restart / Stop / Start / Terminate**, and a **web terminal** (xterm.js
-  in the browser, straight to the VM).
+- **AWS/GCP-style console** — a resource **table** (Name · ID · Status · Bundle · Type · IP ·
+  Created) with a card/table toggle, a `Home › Instances` breadcrumb, and a live `R/N running`
+  count. Status streams in without refreshing.
+- **Manage from the panel** — a tabbed per-VPS detail page (**Overview / Monitoring / Access /
+  Danger**): specs, copy-paste SSH, **rename** (a Name tag; the id stays `vps-N`), **Restart / Stop
+  / Start / Terminate**, and a **web terminal** (xterm.js in the browser, straight to the VM).
 - **Self-healing** — a health watchdog probes each VPS and auto-restarts the unhealthy, with a
   back-off so a genuinely broken VM is flagged "flapping" instead of restarted forever.
-- **Monitoring** — live CPU/RAM/disk/net per VPS via **Beszel** (self-hosted hub + a tiny agent per VPS).
+- **Monitoring** — live CPU/RAM/disk per VPS **right in the Monitoring tab** (the panel proxies the
+  hub), plus full history via **Beszel** (self-hosted hub + a tiny agent per VPS).
 - **Reproducible** — all config in `.env`; reset = wipe VMs, `git pull`, restore `.env`, run one script.
 
 ## Hard truths (Apple Silicon)

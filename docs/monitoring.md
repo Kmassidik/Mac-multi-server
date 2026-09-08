@@ -20,6 +20,26 @@ you:       https://monitor.$DOMAIN ──cloudflared──► hub 127.0.0.1:8090
   `~/.beszel/pb_data` (small; low-resolution — typically well under 100 MB).
 - The **agent** connects *out* to the hub (WebSocket), so no inbound port is opened on the VPS.
 
+## In-panel monitoring (the Monitoring tab)
+Each VPS's detail page has a **Monitoring** tab that shows *that VPS's* live **CPU / Memory / Disk**
+as bars, without leaving the panel. It works by having the panel **proxy the Beszel hub API
+server-side** (`Beszel.swift`): the hub has its own login, so the panel authenticates to it using
+`BESZEL_ADMIN_EMAIL` / `BESZEL_ADMIN_PASSWORD` from `.env` (against `http://127.0.0.1:8090`), then
+reads the matching system record.
+
+- **Matched by IP.** The Beszel agent registers under the **guest's own hostname**, not our `vps-N`
+  id, so the panel matches the system by the VM's **IP** (`host='<ip>'`) rather than by name.
+- **Stopped VPS** → answered authoritatively as `stopped` **before** touching the hub (so the
+  message shows even if the hub is down): "start it to see live metrics".
+- **Agent offline** (booting, unhealthy, or just down) → the tab shows the **last-seen** values and
+  marks them stale, with the agent's status.
+- **Graceful degradation** — hub unreachable, no agent reporting yet, or monitoring not configured
+  (`BESZEL_*` unset) each show a plain explanatory message instead of an error.
+- A **"Full graphs in Beszel"** link always points at `monitor.$DOMAIN` for the full history/graphs.
+
+This tab is a read-only convenience view; the Beszel hub remains the source of truth for history
+and alerting.
+
 ## First-time setup (2 minutes, once)
 `install.sh` installs and starts the hub automatically, and **creates the hub admin from `.env`**
 so you skip Beszel's first-run web form:

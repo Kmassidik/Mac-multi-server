@@ -9,6 +9,8 @@ click "Deploy"  (specs + bundle)         e.g. cpu=2 mem=4096 disk=40 bundle=open
         ▼
 0. disk guard   refuse if the Mac would drop below the free-disk floor (VPS_MIN_FREE_GB /
                 VPS_DISK_MARGIN_GB) — see "Failure & recovery" in architecture.md
+0b. state       write state/vps-{n}.json as status "provisioning" up front, so the console shows
+                the instance instantly (pulsing amber) and streams it to "running" — no "wait a minute"
 1. tart clone  $VPS_BASE_IMAGE  vps-{n}     # base image (bundle installed after boot, below)
 2. tart set    vps-{n} --cpu 2 --memory 4096 --disk-size 40
 3. launchd     io.macmultiserver.vps-{n}    # `tart run --no-graphics` — persistent, KeepAlive
@@ -18,8 +20,8 @@ click "Deploy"  (specs + bundle)         e.g. cpu=2 mem=4096 disk=40 bundle=open
 7. monitoring   install the Beszel agent (if BESZEL_KEY/TOKEN set) — reports out to the hub
 8. cloudflare   ssh route  vps{n}.$DOMAIN → ssh://192.168.64.x:22   (cf_ssh_route_add)
                            + proxied DNS CNAME → tunnel
-9. record       state/vps-{n}.json  (name, label, bundle, status, specs, ip, app_port,
-                                      ssh_host, created)
+9. record       rewrite state/vps-{n}.json with status "running" (name, label, bundle, specs,
+                                      ip, app_port, ssh_host, created)
         │
         ▼
 prints the details:
@@ -55,10 +57,17 @@ Both agents run entirely inside the VPS and need no local GPU. To add your own b
 
 ## Lifecycle (restart / stop / start)
 Beyond deploy/destroy, each VPS can be managed from `./mms` or the detail page:
-- **restart** — `tart stop` then `launchctl kickstart -k` the VM's LaunchAgent (KeepAlive stays on).
+- **restart** — set status `restarting`, `tart stop`, then `launchctl kickstart -k` the VM's
+  LaunchAgent (KeepAlive stays on).
 - **stop** — `launchctl bootout` the agent (so KeepAlive won't relaunch) + `tart stop`; the plist is
   kept. Status becomes `stopped`, and the watchdog skips it (a deliberate stop is respected).
-- **start** — re-bootstrap the kept plist. Status back to `running`.
+- **start** — set status `starting`, then re-bootstrap the kept plist (fall back to recreating it).
+
+**Readiness probe.** `restart` and `start` don't flip straight to `running`. They set the
+transitional status (`restarting` / `starting`), then a backgrounded wait polls until the guest is
+truly reachable — `tart ip` resolves **and** `ssh admin@<ip> true` succeeds — and only then writes
+`running` (or `unhealthy` if it never came up). So the console's web-terminal button (gated on
+`running`) stays disabled until the VM has actually finished booting.
 
 ## Persistence, health & reset
 - Each VPS + the control plane + cloudflared are **launchd** services → survive reboot.

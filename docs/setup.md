@@ -75,6 +75,31 @@ all use the SSD. Do it right:
 Note: more storage means **bigger or more VM disks**, not more *running* VMs — that ceiling is RAM
 (see [architecture.md → Failure & recovery](architecture.md#failure--recovery) and the capacity notes).
 
+The **host free-disk guard** also watches this volume: a deploy is refused if it would drop the
+VM volume (`TART_HOME` if set, else `~/.tart`) below `max(VPS_MIN_FREE_GB, disk + VPS_DISK_MARGIN_GB)`
+(defaults 20 GB floor, 10 GB margin). Free space or lower `--disk` to proceed.
+
+## Direct SSH access (authorize user keys, optional)
+The web terminal in the panel always works (it uses the host's own key server-side). To let people
+`ssh admin@vpsN.$DOMAIN` **directly from their own machines**, point `VPS_AUTHORIZED_KEYS` at a file
+of extra public keys — one per line — that every new VPS should trust:
+
+```
+VPS_AUTHORIZED_KEYS=/Users/you/mac-multi-server/team-keys.pub
+```
+
+Each key in that file is added to `~/.ssh/authorized_keys` on every VPS deployed after it's set.
+Those users also need `cloudflared` + the `Host *.$DOMAIN` `ProxyCommand` block in their
+`~/.ssh/config` (shown on each VPS's **Access** tab). See [networking.md](networking.md). No IP is
+ever exposed. Leave it empty for panel-web-terminal-only access.
+
+## Ops note — the panel's PATH
+The control plane runs as a **LaunchDaemon**, which starts with a **minimal `PATH`** (`/usr/bin:/bin`)
+that omits Homebrew. So `lib/common.sh` prepends `/opt/homebrew/bin:/usr/local/bin` to `PATH`,
+which is why `tart` / `sshpass` / `cloudflared` resolve for panel-invoked deploys just as they do
+in your shell. (This was a historical "works from the CLI, fails from the panel" bug — now fixed;
+nothing to configure.)
+
 ## Security notes
 - The platform opens **no inbound port** — cloudflared reaches Cloudflare outbound, and VPS are
   reached by domain SSH (`ssh admin@vpsN.$DOMAIN`) through the tunnel, no jump host. pf stays
