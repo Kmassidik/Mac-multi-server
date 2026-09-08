@@ -100,60 +100,40 @@
           <div class="sec"><h2>Access — SSH by domain, no IP</h2></div>
 
           <label class="fld">Connect</label>
-          <p class="hint sub2">Paste this into your terminal. It reaches the server <strong>by name</strong> through Cloudflare — no IP address, no VPN, no open ports. <code>admin</code> is your username on the server.</p>
+          <p class="hint sub2">Paste into your terminal — it reaches the server <strong>by name</strong> through Cloudflare (no IP, no VPN). <code>admin</code> is your username.</p>
           <div class="copybox"><code id="sshcmd">{{SSH}}</code><button class="btn line" type="button" onclick="copyEl('sshcmd', this)">Copy</button></div>
 
           <!-- one-time per-computer setup; shown only when the VPS has a domain route -->
           <div class="setup-guide" {{SETUPHIDE}}>
-            <label class="fld">First time on this computer — 3 steps</label>
-            <p class="hint sub2">Do these once per computer. After that, the command above just works, on any network.</p>
+            <div class="setup-head">First time on this computer? Three one-time steps.</div>
 
             <div class="step">
-              <div class="step-h"><span class="step-n">1</span> Install <code>cloudflared</code></div>
-              <p class="hint sub2">This small program carries the SSH connection through the tunnel. Open the tab for your system:</p>
-              <details open>
-                <summary>macOS</summary>
-                <p class="hint sub2">Easiest is <a href="https://brew.sh" target="_blank" rel="noopener">Homebrew</a>:</p>
-                <div class="copybox"><code id="cf-mac">brew install cloudflared</code><button class="btn line" type="button" onclick="copyEl('cf-mac', this)">Copy</button></div>
-                <p class="hint sub2">No Homebrew? Get the <code>.pkg</code> from the <a href="https://github.com/cloudflare/cloudflared/releases/latest" target="_blank" rel="noopener">releases page</a> (pick <code>darwin-arm64</code> for Apple Silicon, <code>darwin-amd64</code> for Intel).</p>
-              </details>
-              <details>
-                <summary>Ubuntu / Debian Linux</summary>
-                <p class="hint sub2">Install Cloudflare's package repo, then the package:</p>
-                <div class="copybox"><code id="cf-lin">sudo mkdir -p --mode=0755 /usr/share/keyrings
-curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | sudo tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
+              <div class="step-h"><span class="step-n">1</span> Install cloudflared</div>
+              <p class="hint sub2">The helper that carries SSH through the tunnel. Run the line for your OS:</p>
+              <div class="cmd"><span class="os">macOS</span><div class="copybox"><code id="cf-mac">brew install cloudflared</code><button class="btn line" type="button" onclick="copyEl('cf-mac', this)">Copy</button></div></div>
+              <div class="cmd"><span class="os">Windows</span><div class="copybox"><code id="cf-win">winget install --id Cloudflare.cloudflared</code><button class="btn line" type="button" onclick="copyEl('cf-win', this)">Copy</button></div></div>
+              <div class="cmd"><span class="os">Linux</span><div class="copybox"><code id="cf-lin">curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | sudo tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
 echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main" | sudo tee /etc/apt/sources.list.d/cloudflared.list
-sudo apt-get update && sudo apt-get install cloudflared</code><button class="btn line" type="button" onclick="copyEl('cf-lin', this)">Copy</button></div>
-                <p class="hint sub2">Other distros / architectures: grab the binary from the <a href="https://github.com/cloudflare/cloudflared/releases/latest" target="_blank" rel="noopener">releases page</a>.</p>
-              </details>
-              <details>
-                <summary>Windows</summary>
-                <p class="hint sub2">In PowerShell, with <a href="https://learn.microsoft.com/windows/package-manager/winget/" target="_blank" rel="noopener">winget</a> (built into Windows 10/11):</p>
-                <div class="copybox"><code id="cf-win">winget install --id Cloudflare.cloudflared</code><button class="btn line" type="button" onclick="copyEl('cf-win', this)">Copy</button></div>
-                <p class="hint sub2">Or download <code>cloudflared-windows-amd64.exe</code> from the <a href="https://github.com/cloudflare/cloudflared/releases/latest" target="_blank" rel="noopener">releases page</a>, rename it to <code>cloudflared.exe</code>, and put it in a folder on your <code>PATH</code>. Use the built-in <strong>OpenSSH</strong> client (or Git Bash / WSL) for the connect command.</p>
-              </details>
+sudo apt-get update && sudo apt-get install -y cloudflared</code><button class="btn line" type="button" onclick="copyEl('cf-lin', this)">Copy</button></div></div>
+              <p class="hint sub2">No package manager? Download the binary from the <a href="https://github.com/cloudflare/cloudflared/releases/latest" target="_blank" rel="noopener">releases page</a> (macOS <code>.pkg</code>, or <code>cloudflared-windows-amd64.exe</code> → rename to <code>cloudflared.exe</code> on your PATH).</p>
             </div>
 
             <div class="step">
-              <div class="step-h"><span class="step-n">2</span> Add the tunnel to your SSH config</div>
-              <p class="hint sub2">This tells SSH to route anything ending in <code>.{{DOM}}</code> through <code>cloudflared</code>. Open (or create) your SSH config file — <code>~/.ssh/config</code> on macOS/Linux, <code>C:\Users\&lt;you&gt;\.ssh\config</code> on Windows — and add:</p>
+              <div class="step-h"><span class="step-n">2</span> Add it to your SSH config</div>
+              <p class="hint sub2">Put this in <code>~/.ssh/config</code> (Windows: <code>C:\Users\&lt;you&gt;\.ssh\config</code>) — create the file if it isn't there. It routes <code>*.{{DOM}}</code> through the tunnel.</p>
               <div class="copybox"><code id="sshcfg">Host *.{{DOM}}
   ProxyCommand cloudflared access ssh --hostname %h
   StrictHostKeyChecking accept-new</code><button class="btn line" type="button" onclick="copyEl('sshcfg', this)">Copy</button></div>
-              <p class="hint sub2">Save the file. If you just created <code>~/.ssh</code>, run <code>chmod 600 ~/.ssh/config</code> (macOS/Linux) so SSH trusts it.</p>
             </div>
 
             <div class="step">
               <div class="step-h"><span class="step-n">3</span> Get your key authorized</div>
-              <p class="hint sub2">The server only admits known SSH keys. Send your <strong>public</strong> key — the contents of <code>~/.ssh/id_ed25519.pub</code> — to whoever runs this host, and ask them to authorize it for this server.</p>
-              <p class="hint sub2">Don't have a key yet? Create one first (safe to keep the defaults, and set a passphrase):</p>
-              <div class="copybox"><code id="keygen">ssh-keygen -t ed25519</code><button class="btn line" type="button" onclick="copyEl('keygen', this)">Copy</button></div>
-              <p class="hint sub2"><span class="muted">Admin note:</span> keys listed in the <code>VPS_AUTHORIZED_KEYS</code> file are trusted automatically on every <em>new</em> VPS.</p>
+              <p class="hint sub2">Send your <strong>public</strong> key (<code>~/.ssh/id_ed25519.pub</code>) to the host admin. No key yet? Make one with <code>ssh-keygen -t ed25519</code>. <span class="muted">(Admin: keys in <code>VPS_AUTHORIZED_KEYS</code> are trusted on every new VPS.)</span></p>
             </div>
           </div>
 
           <!-- no domain route yet -->
-          <p class="hint sub2" {{NODOMHIDE}}>This server doesn't have a public domain route yet (Cloudflare keys aren't set in <code>.env</code>), so it can't be reached by name from outside. Use the <strong>Web terminal</strong> on the Overview tab, which works from right here in the browser.</p>
+          <p class="hint sub2" {{NODOMHIDE}}>No public domain route yet (Cloudflare keys aren't set in <code>.env</code>). Use the <strong>Web terminal</strong> on the Overview tab, which works right here in the browser.</p>
         </div>
       </section>
 

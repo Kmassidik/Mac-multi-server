@@ -252,22 +252,16 @@ body.empty .topology-section{margin-top:56px}
 .hint.sub2{margin:12px 0 8px;min-height:0;font-family:var(--sans);font-weight:300;font-size:12px;color:var(--m60);line-height:1.6}
 .hint.sub2 a{text-decoration:underline}
 .hint.sub2 code{font-family:var(--mono);background:var(--gray);padding:1px 4px}
-/* Access tab — first-time setup steps + per-OS install tabs */
-.setup-guide{border-top:1px solid var(--gray);margin-top:32px;padding-top:8px}
-.step{padding:20px 0;border-bottom:1px solid var(--gray)}
-.step:last-child{border-bottom:0}
-.step-h{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:13px;font-weight:700;color:var(--black)}
-.step-h code{font-weight:400}
-.step-n{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;flex-shrink:0;background:var(--green);color:var(--black);border:1px solid var(--black);font-size:12px;font-weight:700}
-.step details{border:1px solid var(--gray);margin-top:8px}
-.step details[open]{border-color:var(--m40)}
-.step details summary{font-family:var(--mono);font-size:12px;font-weight:700;padding:10px 14px;cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;color:var(--m70)}
-.step details[open] summary{color:var(--black);border-bottom:1px solid var(--gray)}
-.step details summary::-webkit-details-marker{display:none}
-.step details summary::before{content:'+';font-size:15px;color:var(--m50);width:14px;display:inline-block;text-align:center}
-.step details[open] summary::before{content:'–'}
-.step details > *:not(summary){margin-left:14px;margin-right:14px}
-.step details > .copybox:last-child,.step details > .hint.sub2:last-child{margin-bottom:14px}
+/* Access tab — flat first-time setup: numbered steps, per-OS command rows */
+.setup-guide{border-top:1px solid var(--gray);margin-top:36px;padding-top:28px}
+.setup-head{font-family:var(--mono);font-size:12px;color:var(--m50);margin-bottom:24px}
+.step{padding-left:34px;position:relative;margin-bottom:32px}
+.step:last-child{margin-bottom:0}
+.step-h{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--black);margin-bottom:4px}
+.step-n{position:absolute;left:0;top:-1px;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:var(--green);color:var(--black);border:1px solid var(--black);font-size:12px;font-weight:700}
+.cmd{display:flex;align-items:flex-start;gap:14px;margin-top:10px}
+.cmd .os{flex:0 0 62px;font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--m50);padding-top:13px}
+.cmd .copybox{flex:1;min-width:0}
 .controls{display:flex;gap:12px;margin:0;flex-wrap:wrap}
 .controls form{margin:0}
 form.inline{display:flex;gap:12px;margin:0}
