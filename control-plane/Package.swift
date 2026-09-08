@@ -13,15 +13,17 @@ let package = Package(
     targets: [
         // tiny C shim for openpty + TIOCSWINSZ (variadic ioctl isn't callable from Swift)
         .target(name: "CPTY"),
+        // pure, I/O-free helpers — a library so they're testable without Xcode
+        .target(name: "PanelCore"),
         .executableTarget(
             name: "Panel",
-            dependencies: [.product(name: "Swifter", package: "swifter"), "CPTY"],
+            dependencies: [.product(name: "Swifter", package: "swifter"), "CPTY", "PanelCore"],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
-        // pure-function unit tests (no I/O, no network): `swift test`
-        .testTarget(
-            name: "PanelTests",
-            dependencies: ["Panel"],
+        // dependency-free unit checks (no XCTest, runs on Command-Line-Tools only): `swift run pcheck`
+        .executableTarget(
+            name: "pcheck",
+            dependencies: ["PanelCore"],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
     ]

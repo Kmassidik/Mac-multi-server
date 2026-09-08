@@ -1,14 +1,12 @@
 import Foundation
+import PanelCore
 
 /// SSR with external templates: reads web/*.html and substitutes {{TOKENS}} server-side.
 /// Design lives in web/ (style.css, *.html, app.js) — editable without recompiling.
+/// The pure helpers (esc/gb/statusClass) live in PanelCore so they can be unit-tested
+/// without Xcode; these forwarders keep every call site here unchanged.
 enum Pages {
-    static func esc(_ s: String) -> String {
-        s.replacingOccurrences(of: "&", with: "&amp;")
-         .replacingOccurrences(of: "<", with: "&lt;")
-         .replacingOccurrences(of: ">", with: "&gt;")
-         .replacingOccurrences(of: "\"", with: "&quot;")
-    }
+    static func esc(_ s: String) -> String { PanelCore.esc(s) }
 
     /// Load web/<name>, replace {{TOKENS}}, strip any leftover tokens.
     static func tpl(_ name: String, _ vars: [String: String]) -> String {
@@ -22,17 +20,9 @@ enum Pages {
     static func errBlock(_ e: String?) -> String { e.map { "<div class=\"err\">\(esc($0))</div>" } ?? "" }
 
     /// MB → a human "N GB" (whole when even, one decimal otherwise).
-    static func gb(_ mb: Int) -> String {
-        let g = Double(mb) / 1024.0
-        return g == g.rounded() ? "\(Int(g)) GB" : String(format: "%.1f GB", g)
-    }
+    static func gb(_ mb: Int) -> String { PanelCore.gb(mb) }
     /// status → tag CSS class: running (green), stopped (muted), else warning (amber).
-    static func statusClass(_ s: String) -> String {
-        if s == "running" { return "run" }
-        if s == "stopped" { return "" }
-        if s == "provisioning" || s == "starting" || s == "restarting" { return "prog" }  // in-progress (pulses)
-        return "warn"   // unhealthy / flapping / failed
-    }
+    static func statusClass(_ s: String) -> String { PanelCore.statusClass(s) }
 
     static func setup(error: String?, csrf: String) -> String {
         tpl("setup.html", ["ERROR": errBlock(error), "CSRF": esc(csrf),

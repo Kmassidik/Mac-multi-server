@@ -91,6 +91,15 @@ selftest() {
     if [ "$code" = 200 ]; then _st_ok "Beszel hub responds (${BESZEL_HUB_URL:-http://127.0.0.1:8090})"; else _st_no "Beszel configured but hub not responding (HTTP $code)"; fi
   else _st_skip "Beszel not configured — monitoring tab will show 'not configured'"; fi
 
+  # ── unit checks: panel pure functions (no Xcode needed) ────
+  _st_head "Unit checks"
+  if command -v swift >/dev/null 2>&1 && [ -f "$ROOT_DIR/control-plane/Package.swift" ]; then
+    local out rc
+    out="$(cd "$ROOT_DIR/control-plane" && swift run -c release pcheck 2>&1)"; rc=$?
+    if [ "$rc" = 0 ]; then _st_ok "pcheck: $(printf '%s' "$out" | tail -1)"
+    else _st_no "pcheck failed:"; printf '%s\n' "$out" | grep '✗' | sed 's/^/      /'; fi
+  else _st_skip "swift toolchain not present — run 'swift run pcheck' where it is"; fi
+
   # ── full: real deploy → destroy round-trip ─────────────────
   if [ "$full" = 1 ]; then
     _st_head "Deploy round-trip (--full)"
