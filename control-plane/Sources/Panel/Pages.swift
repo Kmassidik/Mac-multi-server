@@ -139,12 +139,9 @@ enum Pages {
         let sshHost = v.ssh_host ?? ""
         let transitioning = ["provisioning", "starting", "restarting"].contains(v.status)
         let ssh = sshHost.isEmpty ? (transitioning ? "— still provisioning… —" : "ssh admin@\(v.ip)") : "ssh admin@\(sshHost)"
-        // one-time tenant setup (only meaningful once the VPS has a domain route)
-        let sshSetup = sshHost.isEmpty ? "" : """
-        <label class="fld">First time only — on your machine</label>
-        <p class="hint sub2">Install <a href="https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/" target="_blank">cloudflared</a>, then add this to <code>~/.ssh/config</code> so SSH tunnels through the domain (no IP, no open port):</p>
-        <div class="copybox"><code id="sshcfg">Host *.\(esc(dom))\n  ProxyCommand cloudflared access ssh --hostname %h</code><button class="btn line" type="button" onclick="copyEl('sshcfg', this)">Copy</button></div>
-        """
+        // The detailed first-time setup guide lives in web/vps.html (multi-OS: macOS/Linux/Windows);
+        // here we just toggle it on when the VPS has a domain route, and pass the domain in.
+        let hasDomain = !sshHost.isEmpty
 
         // web terminal only makes sense on a running VM (ssh to a stopped one just fails).
         let running = v.status == "running"
@@ -170,7 +167,9 @@ enum Pages {
                                  : "<span class=\"muted\">— no domain (set Cloudflare keys in .env) —</span>")
                 : esc(sshHost),
             "SSH": esc(ssh),
-            "SSHSETUP": sshSetup,
+            "DOM": esc(dom),
+            "SETUPHIDE": hasDomain ? "" : "hidden",
+            "NODOMHIDE": hasDomain ? "hidden" : "",
             "CREATED": esc(v.created),
             "WEBTERM": webTerm,
             // manual controls: Start only when stopped; Restart + Stop only when not stopped.
